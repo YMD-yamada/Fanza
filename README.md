@@ -23,6 +23,8 @@ cp .env.example .env.local
 - `DMM_API_ID`
 - `DMM_AFFILIATE_ID`
 
+**GitHub 公開時:** `.env.local` は秘密を含むためリポジトリに含めません（`.gitignore` で除外）。`git add -f .env.local` のような強制追加はしないでください。テンプレは `.env.example` のみコミットします。
+
 3. 開発サーバー起動
 
 ```bash
