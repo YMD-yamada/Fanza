@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Fanza Search Navigator
 
-## Getting Started
+Fanza APIを使って作品検索・閲覧・購入導線をまとめたWebアプリです。
+検索一覧から画像/サンプル動画/アフィリエイト購入リンクへ素早くアクセスできます。
 
-First, run the development server:
+## セットアップ
+
+1. 依存パッケージのインストール
+
+```bash
+npm install
+```
+
+2. 環境変数を設定
+
+`.env.example` をコピーして `.env.local` を作成し、値を入力してください。
+
+```bash
+cp .env.example .env.local
+```
+
+必須:
+- `DMM_API_ID`
+- `DMM_AFFILIATE_ID`
+
+3. 開発サーバー起動
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ブラウザで `http://localhost:3000` を開きます。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 主な機能
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- キーワード検索、並び替え、ページング
+- 一覧カードで作品情報と購入導線を表示
+- 詳細ページでパッケージ画像・サンプル動画・サンプル画像を表示
+- 購入リンクにアフィリエイトIDを自動付与
+- クリック計測用のAPIエンドポイントを提供
 
-## Learn More
+## 公開時の注意
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- API利用規約およびアフィリエイト規約を確認してください
+- 年齢制限や免責を明示するページを公開してください
+- 本番では計測基盤（GA4/Plausible等）への接続を推奨します

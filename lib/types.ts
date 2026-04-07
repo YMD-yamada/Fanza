@@ -1,0 +1,30 @@
+export type SearchFilters = {
+  keyword: string;
+  page: number;
+  sort?: string;
+};
+
+export type NormalizedItem = {
+  id: string;
+  title: string;
+  titleKana?: string;
+  description?: string;
+  actressNames: string[];
+  genres: string[];
+  packageImageUrl?: string;
+  largeImageUrl?: string;
+  sampleVideoUrl?: string;
+  sampleImages: string[];
+  listPrice?: string;
+  releaseDate?: string;
+  reviewAverage?: number;
+  productUrl?: string;
+  affiliateUrl: string;
+};
+
+export type SearchResponse = {
+  items: NormalizedItem[];
+  totalCount: number;
+  page: number;
+  hasNext: boolean;
+};
