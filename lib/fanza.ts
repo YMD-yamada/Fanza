@@ -6,7 +6,10 @@ const DMM_API_ID = process.env.DMM_API_ID ?? "";
 const SITE = process.env.FANZA_SITE ?? "FANZA";
 const SERVICE = process.env.FANZA_SERVICE ?? "digital";
 const FLOOR = process.env.FANZA_FLOOR ?? "videoa";
-const HITS = Number(process.env.FANZA_HITS ?? "24");
+const DEFAULT_HITS = 8;
+const MAX_HITS = 12;
+const parsedHits = Number(process.env.FANZA_HITS ?? String(DEFAULT_HITS));
+const HITS = Number.isFinite(parsedHits) && parsedHits > 0 ? Math.min(Math.floor(parsedHits), MAX_HITS) : DEFAULT_HITS;
 
 function getString(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
@@ -22,7 +25,8 @@ function getArray(value: unknown): string[] {
 function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
   const itemInfo = (raw.iteminfo as Record<string, unknown> | undefined) ?? {};
   const sampleImagesRaw = (raw.sampleImageURL as Record<string, unknown> | undefined) ?? {};
-  const sampleList = (sampleImagesRaw.sample_s as unknown[] | undefined) ?? [];
+  const sampleSRaw = sampleImagesRaw.sample_s;
+  const sampleList = Array.isArray(sampleSRaw) ? sampleSRaw : [];
 
   const actressInfo = (itemInfo.actress as unknown[] | undefined) ?? [];
   const genreInfo = (itemInfo.genre as unknown[] | undefined) ?? [];
@@ -40,7 +44,8 @@ function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
     sampleVideoUrl: getString((raw.sampleMovieURL as Record<string, unknown> | undefined)?.size_720_480),
     sampleImages: sampleList
       .map((entry) => getString((entry as Record<string, unknown>).image))
-      .filter((entry): entry is string => Boolean(entry)),
+      .filter((entry): entry is string => Boolean(entry))
+      .slice(0, 8),
     listPrice: getString(raw.prices),
     releaseDate: getString(raw.date),
     reviewAverage:
@@ -58,8 +63,12 @@ function ensureConfig() {
   if (!DMM_API_ID) {
     throw new Error("DMM_API_ID is missing.");
   }
-  if (!getAffiliateId()) {
+  const affiliateId = getAffiliateId();
+  if (!affiliateId) {
     throw new Error("DMM_AFFILIATE_ID is missing.");
+  }
+  if (!/^[A-Za-z0-9._-]+-990$/.test(affiliateId) || affiliateId.toLowerCase() === "affiliate-990") {
+    throw new Error("DMM_AFFILIATE_ID is invalid. Set your issued affiliate id (example: xxxxx-990).");
   }
 }
 
@@ -93,10 +102,12 @@ export async function searchFanza(filters: SearchFilters): Promise<SearchRespons
   });
 
   if (!response.ok) {
-    throw new Error(`Fanza API request failed (${response.status}).`);
+    const errBody = await response.text();
+    throw new Error(`Fanza API request failed (${response.status}): ${errBody.slice(0, 160)}`);
   }
 
-  const json = (await response.json()) as RawSearchResult;
+  const json = (await response.json()) as RawSearchResult & Record<string, unknown>;
+
   const items = (json.result?.items ?? []).map(normalizeItem);
   const totalCount = json.result?.total_count ?? 0;
   const page = filters.page;

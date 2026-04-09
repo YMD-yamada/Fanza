@@ -45,6 +45,16 @@ export function ItemCard({ item }: ItemCardProps) {
           >
             詳細を見る
           </Link>
+          {item.sampleVideoUrl && (
+            <Link
+              href={item.sampleVideoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex rounded-md border border-neutral-700 px-4 py-2 text-sm font-medium hover:bg-neutral-800"
+            >
+              サンプル動画
+            </Link>
+          )}
           <AffiliateButton href={item.affiliateUrl} itemId={item.id} title={item.title} />
         </div>
       </div>

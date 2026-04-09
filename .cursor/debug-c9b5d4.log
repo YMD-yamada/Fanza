@@ -1,0 +1,36 @@
+{
+    "data":  {
+                 "lastCommand":  "npm run build",
+                 "pid":  24508,
+                 "lastExitCode":  1
+             },
+    "hypothesisId":  "H1",
+    "message":  "Terminal 8 still same process and stale command history",
+    "runId":  "repro-3",
+    "sessionId":  "c9b5d4",
+    "timestamp":  1775742487037,
+    "location":  "terminal8:metadata"
+}
+{
+    "data":  {
+                 "node":  "v24.14.1",
+                 "npm":  "11.11.0"
+             },
+    "hypothesisId":  "H2",
+    "message":  "New shell still resolves npm",
+    "runId":  "repro-3",
+    "sessionId":  "c9b5d4",
+    "timestamp":  1775742487474,
+    "location":  "system:new-shell-check"
+}
+{
+    "data":  {
+                 "needsTerminalRestart":  true
+             },
+    "hypothesisId":  "H3",
+    "message":  "User terminal likely not restarted after install",
+    "runId":  "repro-3",
+    "sessionId":  "c9b5d4",
+    "timestamp":  1775742487474,
+    "location":  "root-cause"
+}
