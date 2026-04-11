@@ -12,7 +12,11 @@ Single-service Next.js 16 app (App Router) using the DMM/Fanza affiliate API. No
 
 ### Required environment variables
 
-The app needs `DMM_API_ID` and `DMM_AFFILIATE_ID` in `.env.local` to return search results. Without valid credentials, search requests return a 500 error. Copy `.env.example` to `.env.local` and fill in real values (see README for details).
+The app needs `DMM_API_ID` and `DMM_AFFILIATE_ID` in `.env.local` to return search results. Without valid credentials, search requests return a 500 error. Copy `.env.example` to `.env.local` and fill in real values (see README for details). In Cloud Agent VMs these are injected as environment variables; write them into `.env.local` before starting the dev server:
+
+```bash
+printf 'DMM_API_ID=%s\nDMM_AFFILIATE_ID=%s\nFANZA_SITE=FANZA\nFANZA_SERVICE=digital\nFANZA_FLOOR=videoa\nFANZA_HITS=24\n' "$DMM_API_ID" "$DMM_AFFILIATE_ID" > .env.local
+```
 
 ### Common commands
 
