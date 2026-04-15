@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ItemCard } from "@/components/ItemCard";
+import { FavoritesSection, HistorySection } from "@/components/SavedSection";
 import { SearchBar } from "@/components/SearchBar";
 import { searchFanza } from "@/lib/fanza";
 
@@ -9,6 +10,10 @@ type HomeProps = {
     q?: string;
     page?: string;
     sort?: string;
+    gte_date?: string;
+    price_min?: string;
+    price_max?: string;
+    has_video?: string;
   }>;
 };
 
@@ -17,80 +22,146 @@ export default async function Home({ searchParams }: HomeProps) {
   const q = params.q?.trim() ?? "";
   const page = Number(params.page ?? "1");
   const sort = params.sort ?? "rank";
+  const gteDate = params.gte_date ?? "";
+  const pMin = Number(params.price_min ?? "") || 0;
+  const pMax = Number(params.price_max ?? "") || 0;
+  const hasVideo = params.has_video === "1";
 
   const resolvedPage = Number.isNaN(page) || page < 1 ? 1 : page;
-  const result = q
+
+  /* --- API call (only when query exists) --- */
+  const raw = q
     ? await searchFanza({
         keyword: q,
         page: resolvedPage,
         sort,
+        ...(gteDate ? { gteDate } : {}),
       })
     : null;
 
+  /* --- Client-side filters --- */
+  const result = raw
+    ? {
+        ...raw,
+        items: raw.items.filter((item) => {
+          if (hasVideo && !item.sampleVideoUrl) return false;
+          if (pMax > 0 && (item.priceMin == null || item.priceMin > pMax)) return false;
+          if (pMin > 0 && (item.priceMin == null || item.priceMin < pMin)) return false;
+          return true;
+        }),
+      }
+    : null;
+
+  /* --- Pagination URL builder (preserves all params) --- */
   const createPageHref = (nextPage: number) => {
-    const nextParams = new URLSearchParams();
-    if (q) nextParams.set("q", q);
-    nextParams.set("sort", sort);
-    nextParams.set("page", String(nextPage));
-    return `/?${nextParams.toString()}`;
+    const p = new URLSearchParams();
+    if (q) p.set("q", q);
+    p.set("sort", sort);
+    p.set("page", String(nextPage));
+    if (gteDate) p.set("gte_date", gteDate);
+    if (params.price_min) p.set("price_min", params.price_min);
+    if (params.price_max) p.set("price_max", params.price_max);
+    if (hasVideo) p.set("has_video", "1");
+    return `/?${p.toString()}`;
   };
+
+  /* --- Active filter badges --- */
+  const badges: { label: string; cls: string }[] = [];
+  if (gteDate) badges.push({ label: `${gteDate.slice(0, 10)}〜`, cls: "bg-violet-500/15 text-violet-300" });
+  if (pMin > 0 || pMax > 0) {
+    const label = pMin > 0 && pMax > 0 ? `${pMin}〜${pMax}円` : pMax > 0 ? `〜${pMax}円` : `${pMin}円〜`;
+    badges.push({ label, cls: "bg-emerald-500/15 text-emerald-300" });
+  }
+  if (hasVideo) badges.push({ label: "動画あり", cls: "bg-amber-500/15 text-amber-300" });
+  const returnToParams = new URLSearchParams();
+  if (q) returnToParams.set("q", q);
+  returnToParams.set("sort", sort);
+  returnToParams.set("page", String(resolvedPage));
+  if (gteDate) returnToParams.set("gte_date", gteDate);
+  if (params.price_min) returnToParams.set("price_min", params.price_min);
+  if (params.price_max) returnToParams.set("price_max", params.price_max);
+  if (hasVideo) returnToParams.set("has_video", "1");
+  const returnTo = `/?${returnToParams.toString()}`;
 
   return (
     <div className="space-y-6">
-      <section className="space-y-2">
-        <h1 className="text-2xl font-bold md:text-3xl">Fanza検索を最短で</h1>
-        <p className="text-sm text-neutral-300">
-          画像・サンプル動画・購入導線を1画面で確認できます。
+      <section className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+          Fanza 検索ナビ
+        </h1>
+        <p className="text-sm text-neutral-400">
+          画像・サンプル動画・購入リンクを1画面で確認
         </p>
       </section>
+
       <SearchBar />
 
       {!q && (
-        <section className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 text-sm text-neutral-300">
-          検索キーワードを入力して作品を探してください。例: 女優名、シリーズ名、ジャンル
-        </section>
+        <>
+          <FavoritesSection />
+          <HistorySection />
+          <section className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-5 py-8 text-center text-sm text-neutral-400">
+            キーワードを入力するか、クイック検索から選んでください
+          </section>
+        </>
       )}
 
       {q && result && (
         <section className="space-y-4">
-          <div className="text-sm text-neutral-300">
-            <span className="font-semibold text-white">{result.totalCount}</span> 件ヒット
-            / ページ {result.page}
+          <div className="flex flex-wrap items-baseline gap-2 text-sm">
+            <span className="tabular-nums font-semibold text-white">
+              {result.totalCount.toLocaleString()}
+            </span>
+            <span className="text-neutral-400">
+              件中 {result.items.length} 件表示
+            </span>
+            {badges.map((b) => (
+              <span
+                key={b.label}
+                className={`rounded-full px-2.5 py-0.5 text-xs ${b.cls}`}
+              >
+                {b.label}
+              </span>
+            ))}
           </div>
+
           {result.items.length === 0 ? (
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 text-sm text-neutral-300">
-              該当作品がありません。キーワードを変えて再検索してください。
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-5 py-8 text-center text-sm text-neutral-400">
+              該当する作品が見つかりませんでした
             </div>
           ) : (
             <div className="grid gap-4">
               {result.items.map((item) => (
-                <ItemCard key={item.id} item={item} />
+                <ItemCard key={item.id} item={item} returnTo={returnTo} />
               ))}
             </div>
           )}
 
-          <div className="flex items-center gap-2">
+          <nav className="flex items-center justify-center gap-1 pt-2">
             <Link
               href={createPageHref(Math.max(1, resolvedPage - 1))}
-              className={`rounded-md border px-3 py-2 text-sm ${
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                 resolvedPage <= 1
-                  ? "pointer-events-none border-neutral-800 text-neutral-600"
-                  : "border-neutral-700 hover:bg-neutral-800"
+                  ? "pointer-events-none text-neutral-700"
+                  : "text-neutral-300 hover:bg-neutral-800"
               }`}
             >
-              前へ
+              ← 前へ
             </Link>
+            <span className="min-w-[3rem] rounded-lg bg-neutral-800 px-3 py-2 text-center text-sm tabular-nums font-medium">
+              {result.page}
+            </span>
             <Link
               href={createPageHref(resolvedPage + 1)}
-              className={`rounded-md border px-3 py-2 text-sm ${
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                 result.hasNext
-                  ? "border-neutral-700 hover:bg-neutral-800"
-                  : "pointer-events-none border-neutral-800 text-neutral-600"
+                  ? "text-neutral-300 hover:bg-neutral-800"
+                  : "pointer-events-none text-neutral-700"
               }`}
             >
-              次へ
+              次へ →
             </Link>
-          </div>
+          </nav>
         </section>
       )}
     </div>

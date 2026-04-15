@@ -12,11 +12,14 @@ export function VideoPreview({ url }: VideoPreviewProps) {
   }
 
   return (
-    <video
-      controls
-      preload="none"
-      className="w-full rounded-xl border border-neutral-800 bg-black"
-      src={url}
-    />
+    <div className="overflow-hidden rounded-xl border border-neutral-800 bg-black">
+      <iframe
+        src={url}
+        className="aspect-video w-full"
+        allowFullScreen
+        allow="autoplay; encrypted-media"
+        title="サンプル動画"
+      />
+    </div>
   );
 }

@@ -25,26 +25,28 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="ja"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-neutral-950 text-neutral-100">
-        <header className="border-b border-neutral-800 bg-neutral-900/70">
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4">
-            <Link href="/" className="text-lg font-semibold">
-              Fanza Search Navigator
+      <body className="flex min-h-full flex-col bg-neutral-950 text-neutral-100">
+        <header className="sticky top-0 z-30 border-b border-neutral-800/80 bg-neutral-950/80 backdrop-blur-md">
+          <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
+            <Link href="/" className="text-base font-bold tracking-tight">
+              Fanza Search
             </Link>
-            <nav className="flex items-center gap-4 text-sm text-neutral-300">
-              <Link href="/legal/terms" className="hover:text-white">
+            <nav className="flex items-center gap-4 text-xs text-neutral-400">
+              <Link href="/legal/terms" className="transition-colors hover:text-white">
                 利用規約
               </Link>
-              <Link href="/legal/privacy" className="hover:text-white">
-                プライバシーポリシー
+              <Link href="/legal/privacy" className="transition-colors hover:text-white">
+                プライバシー
               </Link>
             </nav>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+          {children}
+        </main>
       </body>
     </html>
   );
