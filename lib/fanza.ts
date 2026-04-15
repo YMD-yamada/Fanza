@@ -7,6 +7,10 @@ const VALID_ARTICLES: ReadonlySet<ArticleType> = new Set([
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?$/;
 
+function toApiDate(date: string, fallbackTime: string): string {
+  return date.includes("T") ? date : `${date}T${fallbackTime}`;
+}
+
 const API_ENDPOINT = "https://api.dmm.com/affiliate/v3/ItemList";
 const DMM_API_ID = process.env.DMM_API_ID ?? "";
 const SITE = process.env.FANZA_SITE ?? "FANZA";
@@ -117,10 +121,10 @@ export async function searchFanza(filters: SearchFilters): Promise<SearchRespons
   });
 
   if (filters.gteDate && DATE_RE.test(filters.gteDate)) {
-    params.set("gte_date", filters.gteDate);
+    params.set("gte_date", toApiDate(filters.gteDate, "00:00:00"));
   }
   if (filters.lteDate && DATE_RE.test(filters.lteDate)) {
-    params.set("lte_date", filters.lteDate);
+    params.set("lte_date", toApiDate(filters.lteDate, "23:59:59"));
   }
   if (
     filters.article &&

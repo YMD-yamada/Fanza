@@ -20,35 +20,81 @@ export default async function ItemDetailPage({ params }: ItemDetailProps) {
 
   return (
     <div className="space-y-6">
-      <Link href="/" className="text-sm text-sky-400 hover:text-sky-300">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1 text-sm text-neutral-400 transition-colors hover:text-white"
+      >
         ← 検索に戻る
       </Link>
 
-      <section className="grid gap-6 rounded-xl border border-neutral-800 bg-neutral-900 p-4 md:grid-cols-[260px_1fr]">
-        <div className="relative h-96 w-full overflow-hidden rounded-xl border border-neutral-700 md:h-[360px]">
+      <section className="grid gap-6 rounded-xl border border-neutral-800 bg-neutral-900/80 p-5 md:grid-cols-[240px_1fr]">
+        <div className="relative mx-auto h-80 w-56 overflow-hidden rounded-xl border border-neutral-700 md:mx-0 md:h-[340px] md:w-full">
           {item.largeImageUrl || item.packageImageUrl ? (
             <Image
               src={item.largeImageUrl ?? item.packageImageUrl ?? ""}
               alt={item.title}
               fill
               className="object-cover"
-              sizes="(max-width: 768px) 100vw, 260px"
+              sizes="(max-width: 768px) 224px, 240px"
             />
           ) : (
-            <div className="flex h-full items-center justify-center bg-neutral-800 text-neutral-400">
+            <div className="flex h-full items-center justify-center bg-neutral-800 text-neutral-500">
               NO IMAGE
             </div>
           )}
         </div>
         <div className="space-y-4">
-          <h1 className="text-xl font-bold md:text-2xl">{item.title}</h1>
-          <p className="text-sm text-neutral-300">{item.description ?? "説明文はありません。"}</p>
-          <div className="grid gap-2 text-sm text-neutral-300">
-            <p>女優: {item.actressNames.join(" / ") || "不明"}</p>
-            <p>ジャンル: {item.genres.join(" / ") || "不明"}</p>
-            <p>発売日: {item.releaseDate ?? "不明"}</p>
-            <p>価格: {item.listPrice ?? "不明"}</p>
-          </div>
+          <h1 className="text-xl font-bold leading-snug md:text-2xl">{item.title}</h1>
+
+          {item.description && (
+            <p className="text-sm leading-relaxed text-neutral-300">{item.description}</p>
+          )}
+
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+            {item.actressNames.length > 0 && (
+              <>
+                <dt className="text-neutral-500">出演</dt>
+                <dd className="text-neutral-200">{item.actressNames.join("、")}</dd>
+              </>
+            )}
+            {item.genres.length > 0 && (
+              <>
+                <dt className="text-neutral-500">ジャンル</dt>
+                <dd className="flex flex-wrap gap-1">
+                  {item.genres.map((g) => (
+                    <span key={g} className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-neutral-300">
+                      {g}
+                    </span>
+                  ))}
+                </dd>
+              </>
+            )}
+            {item.releaseDate && (
+              <>
+                <dt className="text-neutral-500">発売日</dt>
+                <dd className="text-neutral-200">{item.releaseDate.slice(0, 10)}</dd>
+              </>
+            )}
+            {item.listPrice && (
+              <>
+                <dt className="text-neutral-500">価格</dt>
+                <dd className="text-neutral-200">{item.listPrice}</dd>
+              </>
+            )}
+            {item.reviewAverage != null && (
+              <>
+                <dt className="text-neutral-500">評価</dt>
+                <dd className="flex items-center gap-1.5">
+                  <span className="text-yellow-400">{"★".repeat(Math.round(item.reviewAverage))}</span>
+                  <span className="tabular-nums font-medium text-yellow-300">{item.reviewAverage.toFixed(1)}</span>
+                  {item.reviewCount != null && (
+                    <span className="text-neutral-500">({item.reviewCount}件)</span>
+                  )}
+                </dd>
+              </>
+            )}
+          </dl>
+
           <AffiliateButton href={item.affiliateUrl} itemId={item.id} title={item.title} />
         </div>
       </section>
