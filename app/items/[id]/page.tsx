@@ -10,10 +10,15 @@ import { getFanzaItemById } from "@/lib/fanza";
 
 type ItemDetailProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ returnTo?: string }>;
 };
 
-export default async function ItemDetailPage({ params }: ItemDetailProps) {
+export default async function ItemDetailPage({ params, searchParams }: ItemDetailProps) {
   const { id } = await params;
+  const detailParams = await searchParams;
+  const returnTo = detailParams.returnTo;
+  const backHref =
+    returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/";
   const item = await getFanzaItemById(id);
 
   if (!item) {
@@ -23,7 +28,7 @@ export default async function ItemDetailPage({ params }: ItemDetailProps) {
   return (
     <div className="space-y-6">
       <Link
-        href="/"
+        href={backHref}
         className="inline-flex items-center gap-1 text-sm text-neutral-400 transition-colors hover:text-white"
       >
         ← 検索に戻る

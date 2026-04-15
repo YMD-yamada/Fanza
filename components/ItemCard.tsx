@@ -7,6 +7,7 @@ import { FavoriteButton } from "@/components/FavoriteButton";
 
 type ItemCardProps = {
   item: NormalizedItem;
+  returnTo?: string;
 };
 
 function StarRating({ avg, count }: { avg: number; count?: number }) {
@@ -21,12 +22,20 @@ function StarRating({ avg, count }: { avg: number; count?: number }) {
   );
 }
 
-export function ItemCard({ item }: ItemCardProps) {
+export function ItemCard({ item, returnTo }: ItemCardProps) {
+  const detailPath = `/items/${encodeURIComponent(item.id)}`;
+  const detailHref = returnTo
+    ? {
+        pathname: detailPath,
+        query: { returnTo },
+      }
+    : detailPath;
+
   return (
     <article className="group grid gap-4 rounded-xl border border-neutral-800 bg-neutral-900/80 p-4 transition-colors hover:border-neutral-700 md:grid-cols-[140px_1fr]">
       {/* thumbnail */}
       <Link
-        href={`/items/${encodeURIComponent(item.id)}`}
+        href={detailHref}
         className="relative mx-auto h-52 w-36 shrink-0 overflow-hidden rounded-lg border border-neutral-700 md:mx-0"
       >
         {item.packageImageUrl ? (
@@ -48,7 +57,7 @@ export function ItemCard({ item }: ItemCardProps) {
       <div className="flex min-w-0 flex-col gap-2">
         <div className="flex items-start gap-2">
           <Link
-            href={`/items/${encodeURIComponent(item.id)}`}
+            href={detailHref}
             className="line-clamp-2 min-w-0 flex-1 text-[15px] font-semibold leading-snug hover:text-sky-400"
           >
             {item.title}
@@ -91,7 +100,7 @@ export function ItemCard({ item }: ItemCardProps) {
         {/* actions */}
         <div className="mt-auto flex flex-wrap gap-2 pt-1">
           <Link
-            href={`/items/${encodeURIComponent(item.id)}`}
+            href={detailHref}
             className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-neutral-800"
           >
             詳細

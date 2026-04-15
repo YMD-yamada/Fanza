@@ -73,6 +73,15 @@ export default async function Home({ searchParams }: HomeProps) {
     badges.push({ label, cls: "bg-emerald-500/15 text-emerald-300" });
   }
   if (hasVideo) badges.push({ label: "動画あり", cls: "bg-amber-500/15 text-amber-300" });
+  const returnToParams = new URLSearchParams();
+  if (q) returnToParams.set("q", q);
+  returnToParams.set("sort", sort);
+  returnToParams.set("page", String(resolvedPage));
+  if (gteDate) returnToParams.set("gte_date", gteDate);
+  if (params.price_min) returnToParams.set("price_min", params.price_min);
+  if (params.price_max) returnToParams.set("price_max", params.price_max);
+  if (hasVideo) returnToParams.set("has_video", "1");
+  const returnTo = `/?${returnToParams.toString()}`;
 
   return (
     <div className="space-y-6">
@@ -123,7 +132,7 @@ export default async function Home({ searchParams }: HomeProps) {
           ) : (
             <div className="grid gap-4">
               {result.items.map((item) => (
-                <ItemCard key={item.id} item={item} />
+                <ItemCard key={item.id} item={item} returnTo={returnTo} />
               ))}
             </div>
           )}
