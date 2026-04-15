@@ -57,7 +57,15 @@ function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
 
   const actressInfo = (itemInfo.actress as unknown[] | undefined) ?? [];
   const genreInfo = (itemInfo.genre as unknown[] | undefined) ?? [];
-  const affiliateUrl = getString(raw.affiliateURL) ?? getString(raw.URL) ?? "#";
+  const rawAffiliateUrl = getString(raw.affiliateURL);
+  const affiliateUrl = rawAffiliateUrl ?? buildAffiliateUrl(getString(raw.URL));
+
+  const sampleMovie = (raw.sampleMovieURL as Record<string, unknown> | undefined) ?? {};
+  const sampleVideoUrl =
+    getString(sampleMovie.size_720_480) ??
+    getString(sampleMovie.size_644_414) ??
+    getString(sampleMovie.size_560_360) ??
+    getString(sampleMovie.size_476_306);
 
   return {
     id: getString(raw.content_id) ?? getString(raw.product_id) ?? crypto.randomUUID(),
@@ -68,7 +76,7 @@ function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
     genres: getArray(genreInfo.map((x) => (x as { name?: string }).name)),
     packageImageUrl: getString((raw.imageURL as Record<string, unknown> | undefined)?.small),
     largeImageUrl: getString((raw.imageURL as Record<string, unknown> | undefined)?.large),
-    sampleVideoUrl: getString((raw.sampleMovieURL as Record<string, unknown> | undefined)?.size_720_480),
+    sampleVideoUrl,
     sampleImages: sampleList
       .map((entry) => getString((entry as Record<string, unknown>).image))
       .filter((entry): entry is string => Boolean(entry))
@@ -78,7 +86,7 @@ function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
     reviewAverage: parseReviewAverage(raw.review),
     reviewCount: parseReviewCount(raw.review),
     productUrl: getString(raw.URL),
-    affiliateUrl: buildAffiliateUrl(affiliateUrl),
+    affiliateUrl: affiliateUrl || "#",
   };
 }
 
