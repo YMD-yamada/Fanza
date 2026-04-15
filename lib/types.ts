@@ -22,6 +22,7 @@ export type NormalizedItem = {
   sampleVideoUrl?: string;
   sampleImages: string[];
   listPrice?: string;
+  priceMin?: number;
   releaseDate?: string;
   reviewAverage?: number;
   reviewCount?: number;

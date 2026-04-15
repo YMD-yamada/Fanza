@@ -3,6 +3,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useMemo, useState } from "react";
 
+/* ------------------------------------------------------------------ */
+/*  Static data                                                        */
+/* ------------------------------------------------------------------ */
+
 const sortOptions = [
   { value: "rank", label: "人気" },
   { value: "review", label: "高評価" },
@@ -27,6 +31,15 @@ const datePresets = [
   { label: "1年", gte: () => daysAgo(365) },
 ] as const;
 
+const pricePresets = [
+  { label: "すべて", min: "", max: "" },
+  { label: "〜500円", min: "", max: "500" },
+  { label: "〜1000円", min: "", max: "1000" },
+  { label: "〜2000円", min: "", max: "2000" },
+  { label: "〜3000円", min: "", max: "3000" },
+  { label: "3000円〜", min: "3000", max: "" },
+] as const;
+
 const quickKeywordGroups = [
   {
     label: "体型・バスト",
@@ -46,6 +59,10 @@ const quickKeywordGroups = [
   },
 ] as const;
 
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
 function resolveGte(preset: (typeof datePresets)[number]): string {
   if (preset.gte === "") return "";
   return typeof preset.gte === "function" ? preset.gte() : preset.gte;
@@ -58,6 +75,10 @@ function matchDatePreset(gteDate: string): number {
     if (resolveGte(datePresets[i]) === gte) return i;
   }
   return -1;
+}
+
+function matchPricePreset(pMin: string, pMax: string): number {
+  return pricePresets.findIndex((p) => p.min === pMin && p.max === pMax);
 }
 
 function parseSelectedChips(q: string): Set<string> {
@@ -75,10 +96,61 @@ function buildQuery(selected: Set<string>, freeText: string): string {
   return [free, chips].filter(Boolean).join(" ");
 }
 
+/* ------------------------------------------------------------------ */
+/*  Pill row                                                           */
+/* ------------------------------------------------------------------ */
+
+function PillRow({
+  label,
+  options,
+  activeIdx,
+  color = "sky",
+  onPick,
+}: {
+  label: string;
+  options: readonly { label: string }[];
+  activeIdx: number;
+  color?: "sky" | "violet" | "emerald" | "amber";
+  onPick: (idx: number) => void;
+}) {
+  const colors: Record<string, string> = {
+    sky: "bg-sky-600 text-white",
+    violet: "bg-violet-600 text-white",
+    emerald: "bg-emerald-600 text-white",
+    amber: "bg-amber-600 text-white",
+  };
+  return (
+    <div className="space-y-1.5">
+      <span className="text-[11px] font-medium tracking-wide text-neutral-500">{label}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((o, i) => (
+          <button
+            key={o.label}
+            type="button"
+            onClick={() => onPick(i)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              activeIdx === i
+                ? colors[color]
+                : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
+
 export function SearchBar() {
   const router = useRouter();
   const sp = useSearchParams();
   const initialQ = sp.get("q") ?? "";
+
   const [freeText, setFreeText] = useState(() => {
     const all = quickKeywordGroups.flatMap((g) => g.keywords);
     let text = initialQ;
@@ -89,23 +161,46 @@ export function SearchBar() {
   const [sort, setSort] = useState(sp.get("sort") ?? "rank");
   const [gteDate, setGteDate] = useState(sp.get("gte_date") ?? "");
   const [activeDateIdx, setActiveDateIdx] = useState(() => matchDatePreset(sp.get("gte_date") ?? ""));
+  const [priceMin, setPriceMin] = useState(sp.get("price_min") ?? "");
+  const [priceMax, setPriceMax] = useState(sp.get("price_max") ?? "");
+  const [activePriceIdx, setActivePriceIdx] = useState(() =>
+    Math.max(0, matchPricePreset(sp.get("price_min") ?? "", sp.get("price_max") ?? "")),
+  );
+  const [hasVideo, setHasVideo] = useState(sp.get("has_video") === "1");
 
   const currentQuery = useMemo(() => buildQuery(selectedChips, freeText), [selectedChips, freeText]);
 
   const navigate = useCallback(
-    (overrides: { q?: string; sort?: string; gte?: string }) => {
+    (overrides: {
+      q?: string;
+      sort?: string;
+      gte?: string;
+      pMin?: string;
+      pMax?: string;
+      video?: boolean;
+    }) => {
       const q = (overrides.q ?? currentQuery).trim();
-      if (!q) return;
+      if (!q) {
+        router.push("/");
+        return;
+      }
       const s = overrides.sort ?? sort;
       const g = overrides.gte ?? gteDate;
+      const pmn = overrides.pMin ?? priceMin;
+      const pmx = overrides.pMax ?? priceMax;
+      const hv = overrides.video ?? hasVideo;
+
       const params = new URLSearchParams();
       params.set("q", q);
       params.set("sort", s);
       params.set("page", "1");
       if (g) params.set("gte_date", g.includes("T") ? g : `${g}T00:00:00`);
+      if (pmn) params.set("price_min", pmn);
+      if (pmx) params.set("price_max", pmx);
+      if (hv) params.set("has_video", "1");
       router.push(`/?${params.toString()}`);
     },
-    [currentQuery, sort, gteDate, router],
+    [currentQuery, sort, gteDate, priceMin, priceMax, hasVideo, router],
   );
 
   const onSubmit = (event: FormEvent) => {
@@ -113,7 +208,8 @@ export function SearchBar() {
     navigate({});
   };
 
-  const pickSort = (value: string) => {
+  const pickSort = (idx: number) => {
+    const value = sortOptions[idx].value;
     setSort(value);
     if (currentQuery.trim()) navigate({ sort: value });
   };
@@ -125,6 +221,20 @@ export function SearchBar() {
     if (currentQuery.trim()) navigate({ gte });
   };
 
+  const pickPrice = (idx: number) => {
+    const p = pricePresets[idx];
+    setPriceMin(p.min);
+    setPriceMax(p.max);
+    setActivePriceIdx(idx);
+    if (currentQuery.trim()) navigate({ pMin: p.min, pMax: p.max });
+  };
+
+  const toggleVideo = () => {
+    const next = !hasVideo;
+    setHasVideo(next);
+    if (currentQuery.trim()) navigate({ video: next });
+  };
+
   const toggleChip = (kw: string) => {
     const next = new Set(selectedChips);
     if (next.has(kw)) {
@@ -134,8 +244,10 @@ export function SearchBar() {
     }
     setSelectedChips(next);
     const q = buildQuery(next, freeText);
-    if (q.trim()) navigate({ q });
+    navigate({ q });
   };
+
+  const sortIdx = sortOptions.findIndex((o) => o.value === sort);
 
   return (
     <div className="space-y-4">
@@ -154,49 +266,40 @@ export function SearchBar() {
         </button>
       </form>
 
-      {/* sort pills */}
+      <PillRow label="並び替え" options={sortOptions} activeIdx={sortIdx} color="sky" onPick={pickSort} />
+      <PillRow label="公開時期" options={datePresets} activeIdx={activeDateIdx} color="violet" onPick={pickDate} />
+      <PillRow label="価格帯" options={pricePresets} activeIdx={activePriceIdx} color="emerald" onPick={pickPrice} />
+
+      {/* video toggle */}
       <div className="space-y-1.5">
-        <span className="text-[11px] font-medium tracking-wide text-neutral-500">並び替え</span>
-        <div className="flex flex-wrap gap-1.5">
-          {sortOptions.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              onClick={() => pickSort(o.value)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                sort === o.value
-                  ? "bg-sky-600 text-white"
-                  : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
-              }`}
-            >
-              {o.label}
-            </button>
-          ))}
+        <span className="text-[11px] font-medium tracking-wide text-neutral-500">サンプル動画</span>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => { if (hasVideo) toggleVideo(); }}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              !hasVideo
+                ? "bg-amber-600 text-white"
+                : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
+            }`}
+          >
+            すべて
+          </button>
+          <button
+            type="button"
+            onClick={() => { if (!hasVideo) toggleVideo(); }}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              hasVideo
+                ? "bg-amber-600 text-white"
+                : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
+            }`}
+          >
+            動画ありのみ
+          </button>
         </div>
       </div>
 
-      {/* date presets */}
-      <div className="space-y-1.5">
-        <span className="text-[11px] font-medium tracking-wide text-neutral-500">公開時期</span>
-        <div className="flex flex-wrap gap-1.5">
-          {datePresets.map((p, i) => (
-            <button
-              key={p.label}
-              type="button"
-              onClick={() => pickDate(i)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                activeDateIdx === i
-                  ? "bg-violet-600 text-white"
-                  : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* quick keyword chips — grouped */}
+      {/* quick keyword chips */}
       <div className="space-y-3">
         <span className="text-[11px] font-medium tracking-wide text-neutral-500">クイック検索（複数選択可）</span>
         {quickKeywordGroups.map((group) => (

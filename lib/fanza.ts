@@ -49,6 +49,25 @@ function parseReviewCount(review: unknown): number | undefined {
   return Number.isFinite(count) ? count : undefined;
 }
 
+function parsePriceMin(prices: unknown): number | undefined {
+  if (prices == null || typeof prices !== "object") return undefined;
+  const p = (prices as Record<string, unknown>).price;
+  if (typeof p === "number") return p;
+  if (typeof p === "string") {
+    const n = parseInt(p.replace(/[^0-9]/g, ""), 10);
+    return Number.isFinite(n) ? n : undefined;
+  }
+  return undefined;
+}
+
+function parsePriceLabel(prices: unknown): string | undefined {
+  if (prices == null || typeof prices !== "object") {
+    return getString(prices);
+  }
+  const p = (prices as Record<string, unknown>).price;
+  return typeof p === "string" ? `${p}円` : getString(p);
+}
+
 function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
   const itemInfo = (raw.iteminfo as Record<string, unknown> | undefined) ?? {};
   const sampleImagesRaw = (raw.sampleImageURL as Record<string, unknown> | undefined) ?? {};
@@ -81,7 +100,8 @@ function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
       .map((entry) => getString((entry as Record<string, unknown>).image))
       .filter((entry): entry is string => Boolean(entry))
       .slice(0, 8),
-    listPrice: getString(raw.prices),
+    listPrice: parsePriceLabel(raw.prices),
+    priceMin: parsePriceMin(raw.prices),
     releaseDate: getString(raw.date),
     reviewAverage: parseReviewAverage(raw.review),
     reviewCount: parseReviewCount(raw.review),

@@ -11,6 +11,9 @@ type HomeProps = {
     page?: string;
     sort?: string;
     gte_date?: string;
+    price_min?: string;
+    price_max?: string;
+    has_video?: string;
   }>;
 };
 
@@ -20,9 +23,14 @@ export default async function Home({ searchParams }: HomeProps) {
   const page = Number(params.page ?? "1");
   const sort = params.sort ?? "rank";
   const gteDate = params.gte_date ?? "";
+  const pMin = Number(params.price_min ?? "") || 0;
+  const pMax = Number(params.price_max ?? "") || 0;
+  const hasVideo = params.has_video === "1";
 
   const resolvedPage = Number.isNaN(page) || page < 1 ? 1 : page;
-  const result = q
+
+  /* --- API call (only when query exists) --- */
+  const raw = q
     ? await searchFanza({
         keyword: q,
         page: resolvedPage,
@@ -31,14 +39,40 @@ export default async function Home({ searchParams }: HomeProps) {
       })
     : null;
 
+  /* --- Client-side filters --- */
+  const result = raw
+    ? {
+        ...raw,
+        items: raw.items.filter((item) => {
+          if (hasVideo && !item.sampleVideoUrl) return false;
+          if (pMax > 0 && (item.priceMin == null || item.priceMin > pMax)) return false;
+          if (pMin > 0 && (item.priceMin == null || item.priceMin < pMin)) return false;
+          return true;
+        }),
+      }
+    : null;
+
+  /* --- Pagination URL builder (preserves all params) --- */
   const createPageHref = (nextPage: number) => {
     const p = new URLSearchParams();
     if (q) p.set("q", q);
     p.set("sort", sort);
     p.set("page", String(nextPage));
     if (gteDate) p.set("gte_date", gteDate);
+    if (params.price_min) p.set("price_min", params.price_min);
+    if (params.price_max) p.set("price_max", params.price_max);
+    if (hasVideo) p.set("has_video", "1");
     return `/?${p.toString()}`;
   };
+
+  /* --- Active filter badges --- */
+  const badges: { label: string; cls: string }[] = [];
+  if (gteDate) badges.push({ label: `${gteDate.slice(0, 10)}〜`, cls: "bg-violet-500/15 text-violet-300" });
+  if (pMin > 0 || pMax > 0) {
+    const label = pMin > 0 && pMax > 0 ? `${pMin}〜${pMax}円` : pMax > 0 ? `〜${pMax}円` : `${pMin}円〜`;
+    badges.push({ label, cls: "bg-emerald-500/15 text-emerald-300" });
+  }
+  if (hasVideo) badges.push({ label: "動画あり", cls: "bg-amber-500/15 text-amber-300" });
 
   return (
     <div className="space-y-6">
@@ -65,16 +99,21 @@ export default async function Home({ searchParams }: HomeProps) {
 
       {q && result && (
         <section className="space-y-4">
-          <div className="flex items-baseline gap-3 text-sm">
+          <div className="flex flex-wrap items-baseline gap-2 text-sm">
             <span className="tabular-nums font-semibold text-white">
               {result.totalCount.toLocaleString()}
             </span>
-            <span className="text-neutral-400">件ヒット</span>
-            {gteDate && (
-              <span className="rounded-full bg-violet-500/15 px-2.5 py-0.5 text-xs text-violet-300">
-                {gteDate.slice(0, 10)}〜
+            <span className="text-neutral-400">
+              件中 {result.items.length} 件表示
+            </span>
+            {badges.map((b) => (
+              <span
+                key={b.label}
+                className={`rounded-full px-2.5 py-0.5 text-xs ${b.cls}`}
+              >
+                {b.label}
               </span>
-            )}
+            ))}
           </div>
 
           {result.items.length === 0 ? (
@@ -89,7 +128,6 @@ export default async function Home({ searchParams }: HomeProps) {
             </div>
           )}
 
-          {/* pagination */}
           <nav className="flex items-center justify-center gap-1 pt-2">
             <Link
               href={createPageHref(Math.max(1, resolvedPage - 1))}
