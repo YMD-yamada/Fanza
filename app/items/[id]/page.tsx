@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AffiliateButton } from "@/components/AffiliateButton";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { RecordHistory } from "@/components/RecordHistory";
 import { VideoPreview } from "@/components/VideoPreview";
 import { getFanzaItemById } from "@/lib/fanza";
 
@@ -46,7 +48,22 @@ export default async function ItemDetailPage({ params }: ItemDetailProps) {
         </div>
 
         <div className="space-y-4">
-          <h1 className="text-xl font-bold leading-snug md:text-2xl">{item.title}</h1>
+          <RecordHistory
+            id={item.id}
+            title={item.title}
+            imageUrl={item.packageImageUrl}
+            actressNames={item.actressNames}
+          />
+          <div className="flex items-start gap-3">
+            <h1 className="min-w-0 flex-1 text-xl font-bold leading-snug md:text-2xl">{item.title}</h1>
+            <FavoriteButton
+              id={item.id}
+              title={item.title}
+              imageUrl={item.packageImageUrl}
+              actressNames={item.actressNames}
+              size="md"
+            />
+          </div>
 
           {item.description && (
             <p className="text-sm leading-relaxed text-neutral-300">{item.description}</p>
@@ -101,10 +118,12 @@ export default async function ItemDetailPage({ params }: ItemDetailProps) {
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">サンプル動画</h2>
-        <VideoPreview url={item.sampleVideoUrl} />
-      </section>
+      {item.sampleVideoUrl && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">サンプル動画</h2>
+          <VideoPreview url={item.sampleVideoUrl} />
+        </section>
+      )}
 
       {item.sampleImages.length > 0 && (
         <section className="space-y-3">

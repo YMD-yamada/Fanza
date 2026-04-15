@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import type { NormalizedItem } from "@/lib/types";
 import { AffiliateButton } from "@/components/AffiliateButton";
+import { FavoriteButton } from "@/components/FavoriteButton";
 
 type ItemCardProps = {
   item: NormalizedItem;
@@ -45,12 +46,20 @@ export function ItemCard({ item }: ItemCardProps) {
 
       {/* info */}
       <div className="flex min-w-0 flex-col gap-2">
-        <Link
-          href={`/items/${encodeURIComponent(item.id)}`}
-          className="line-clamp-2 text-[15px] font-semibold leading-snug hover:text-sky-400"
-        >
-          {item.title}
-        </Link>
+        <div className="flex items-start gap-2">
+          <Link
+            href={`/items/${encodeURIComponent(item.id)}`}
+            className="line-clamp-2 min-w-0 flex-1 text-[15px] font-semibold leading-snug hover:text-sky-400"
+          >
+            {item.title}
+          </Link>
+          <FavoriteButton
+            id={item.id}
+            title={item.title}
+            imageUrl={item.packageImageUrl}
+            actressNames={item.actressNames}
+          />
+        </div>
 
         {item.actressNames.length > 0 && (
           <p className="text-sm text-neutral-300">
