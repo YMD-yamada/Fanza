@@ -1,5 +1,11 @@
 import { buildAffiliateUrl, getAffiliateId } from "@/lib/affiliate";
-import type { NormalizedItem, SearchFilters, SearchResponse } from "@/lib/types";
+import type { ArticleType, NormalizedItem, SearchFilters, SearchResponse } from "@/lib/types";
+
+const VALID_ARTICLES: ReadonlySet<ArticleType> = new Set([
+  "actress", "author", "genre", "maker", "series", "label",
+]);
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?$/;
 
 const API_ENDPOINT = "https://api.dmm.com/affiliate/v3/ItemList";
 const DMM_API_ID = process.env.DMM_API_ID ?? "";
@@ -96,6 +102,21 @@ export async function searchFanza(filters: SearchFilters): Promise<SearchRespons
     hits: String(HITS),
     offset: String((filters.page - 1) * HITS + 1),
   });
+
+  if (filters.gteDate && DATE_RE.test(filters.gteDate)) {
+    params.set("gte_date", filters.gteDate);
+  }
+  if (filters.lteDate && DATE_RE.test(filters.lteDate)) {
+    params.set("lte_date", filters.lteDate);
+  }
+  if (
+    filters.article &&
+    VALID_ARTICLES.has(filters.article) &&
+    filters.articleId
+  ) {
+    params.set("article", filters.article);
+    params.set("article_id", filters.articleId);
+  }
 
   const response = await fetch(`${API_ENDPOINT}?${params.toString()}`, {
     next: { revalidate: 120 },

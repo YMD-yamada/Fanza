@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { searchFanza } from "@/lib/fanza";
+import type { ArticleType } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const keyword = searchParams.get("q") ?? "";
   const page = Number(searchParams.get("page") ?? "1");
   const sort = searchParams.get("sort") ?? "rank";
+  const gteDate = searchParams.get("gte_date") ?? "";
+  const lteDate = searchParams.get("lte_date") ?? "";
+  const article = (searchParams.get("article") ?? "") as ArticleType | "";
+  const articleId = searchParams.get("article_id") ?? "";
 
   if (!keyword.trim()) {
     return NextResponse.json(
@@ -20,6 +25,9 @@ export async function GET(request: NextRequest) {
       keyword,
       page: Number.isNaN(page) || page < 1 ? 1 : page,
       sort,
+      ...(gteDate ? { gteDate } : {}),
+      ...(lteDate ? { lteDate } : {}),
+      ...(article && articleId ? { article: article as ArticleType, articleId } : {}),
     });
 
     return NextResponse.json(data);

@@ -34,9 +34,12 @@ export function ItemCard({ item }: ItemCardProps) {
         <p className="text-sm text-neutral-400">
           {item.genres.length > 0 ? item.genres.slice(0, 4).join(" / ") : "ジャンル情報なし"}
         </p>
-        <div className="text-sm text-neutral-300">
+        <div className="flex flex-wrap gap-x-4 text-sm text-neutral-300">
           <span>発売日: {item.releaseDate ?? "不明"}</span>
-          <span className="ml-4">価格: {item.listPrice ?? "不明"}</span>
+          <span>価格: {item.listPrice ?? "不明"}</span>
+          {item.reviewAverage != null && (
+            <span className="text-yellow-400">★ {item.reviewAverage.toFixed(2)}</span>
+          )}
         </div>
         <div className="mt-auto flex flex-wrap gap-2">
           <Link

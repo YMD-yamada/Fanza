@@ -1,7 +1,13 @@
+export type ArticleType = "actress" | "author" | "genre" | "maker" | "series" | "label";
+
 export type SearchFilters = {
   keyword: string;
   page: number;
   sort?: string;
+  gteDate?: string;
+  lteDate?: string;
+  article?: ArticleType;
+  articleId?: string;
 };
 
 export type NormalizedItem = {
