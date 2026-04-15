@@ -24,6 +24,7 @@ export type NormalizedItem = {
   listPrice?: string;
   releaseDate?: string;
   reviewAverage?: number;
+  reviewCount?: number;
   productUrl?: string;
   affiliateUrl: string;
 };

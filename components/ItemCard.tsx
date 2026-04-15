@@ -38,7 +38,12 @@ export function ItemCard({ item }: ItemCardProps) {
           <span>発売日: {item.releaseDate ?? "不明"}</span>
           <span>価格: {item.listPrice ?? "不明"}</span>
           {item.reviewAverage != null && (
-            <span className="text-yellow-400">★ {item.reviewAverage.toFixed(2)}</span>
+            <span className="text-yellow-400">
+              ★ {item.reviewAverage.toFixed(2)}
+              {item.reviewCount != null && (
+                <span className="ml-1 text-neutral-500">({item.reviewCount}件)</span>
+              )}
+            </span>
           )}
         </div>
         <div className="mt-auto flex flex-wrap gap-2">

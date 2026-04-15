@@ -28,6 +28,23 @@ function getArray(value: unknown): string[] {
     .filter((entry): entry is string => Boolean(entry));
 }
 
+function parseReviewAverage(review: unknown): number | undefined {
+  if (review == null) return undefined;
+  if (typeof review === "object") {
+    const avg = (review as Record<string, unknown>).average;
+    const num = Number(avg);
+    return Number.isFinite(num) ? num : undefined;
+  }
+  const num = Number(review);
+  return Number.isFinite(num) ? num : undefined;
+}
+
+function parseReviewCount(review: unknown): number | undefined {
+  if (review == null || typeof review !== "object") return undefined;
+  const count = Number((review as Record<string, unknown>).count);
+  return Number.isFinite(count) ? count : undefined;
+}
+
 function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
   const itemInfo = (raw.iteminfo as Record<string, unknown> | undefined) ?? {};
   const sampleImagesRaw = (raw.sampleImageURL as Record<string, unknown> | undefined) ?? {};
@@ -54,12 +71,8 @@ function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
       .slice(0, 8),
     listPrice: getString(raw.prices),
     releaseDate: getString(raw.date),
-    reviewAverage:
-      typeof raw.review_average === "number"
-        ? raw.review_average
-        : Number.isNaN(Number(raw.review_average))
-          ? undefined
-          : Number(raw.review_average),
+    reviewAverage: parseReviewAverage(raw.review),
+    reviewCount: parseReviewCount(raw.review),
     productUrl: getString(raw.URL),
     affiliateUrl: buildAffiliateUrl(affiliateUrl),
   };
