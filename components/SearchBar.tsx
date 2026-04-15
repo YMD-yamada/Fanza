@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useCallback, useState } from "react";
+import { FormEvent, useCallback, useMemo, useState } from "react";
 
 const sortOptions = [
   { value: "rank", label: "人気" },
@@ -27,12 +27,24 @@ const datePresets = [
   { label: "1年", gte: () => daysAgo(365) },
 ] as const;
 
-const quickKeywords = [
-  "巨乳", "美乳", "スレンダー", "中出し",
-  "人妻", "熟女", "素人", "女子大生",
-  "OL", "ナンパ", "3P", "痴女",
-  "コスプレ", "企画", "VR",
-];
+const quickKeywordGroups = [
+  {
+    label: "体型・バスト",
+    keywords: ["巨乳", "美乳", "爆乳", "貧乳・微乳", "スレンダー", "ぽっちゃり", "長身", "ミニ系"],
+  },
+  {
+    label: "タイプ",
+    keywords: ["人妻", "熟女", "素人", "女子大生", "OL", "ギャル", "お姉さん", "ロリ系", "痴女", "女教師"],
+  },
+  {
+    label: "プレイ・シチュエーション",
+    keywords: ["中出し", "顔射", "ナンパ", "3P・4P", "潮吹き", "イラマチオ", "寝取り・寝取られ", "逆ナンパ", "露出"],
+  },
+  {
+    label: "ジャンル・その他",
+    keywords: ["企画", "コスプレ", "VR", "4K", "デビュー作品", "独占配信", "ハイビジョン", "アイドル・芸能人"],
+  },
+] as const;
 
 function resolveGte(preset: (typeof datePresets)[number]): string {
   if (preset.gte === "") return "";
@@ -48,17 +60,41 @@ function matchDatePreset(gteDate: string): number {
   return -1;
 }
 
+function parseSelectedChips(q: string): Set<string> {
+  const all = quickKeywordGroups.flatMap((g) => g.keywords);
+  const set = new Set<string>();
+  for (const kw of all) {
+    if (q.includes(kw)) set.add(kw);
+  }
+  return set;
+}
+
+function buildQuery(selected: Set<string>, freeText: string): string {
+  const chips = [...selected].join(" ");
+  const free = freeText.trim();
+  return [free, chips].filter(Boolean).join(" ");
+}
+
 export function SearchBar() {
   const router = useRouter();
   const sp = useSearchParams();
-  const [keyword, setKeyword] = useState(sp.get("q") ?? "");
+  const initialQ = sp.get("q") ?? "";
+  const [freeText, setFreeText] = useState(() => {
+    const all = quickKeywordGroups.flatMap((g) => g.keywords);
+    let text = initialQ;
+    for (const kw of all) text = text.replaceAll(kw, "");
+    return text.replace(/\s+/g, " ").trim();
+  });
+  const [selectedChips, setSelectedChips] = useState<Set<string>>(() => parseSelectedChips(initialQ));
   const [sort, setSort] = useState(sp.get("sort") ?? "rank");
   const [gteDate, setGteDate] = useState(sp.get("gte_date") ?? "");
   const [activeDateIdx, setActiveDateIdx] = useState(() => matchDatePreset(sp.get("gte_date") ?? ""));
 
+  const currentQuery = useMemo(() => buildQuery(selectedChips, freeText), [selectedChips, freeText]);
+
   const navigate = useCallback(
     (overrides: { q?: string; sort?: string; gte?: string }) => {
-      const q = (overrides.q ?? keyword).trim();
+      const q = (overrides.q ?? currentQuery).trim();
       if (!q) return;
       const s = overrides.sort ?? sort;
       const g = overrides.gte ?? gteDate;
@@ -69,7 +105,7 @@ export function SearchBar() {
       if (g) params.set("gte_date", g.includes("T") ? g : `${g}T00:00:00`);
       router.push(`/?${params.toString()}`);
     },
-    [keyword, sort, gteDate, router],
+    [currentQuery, sort, gteDate, router],
   );
 
   const onSubmit = (event: FormEvent) => {
@@ -79,28 +115,34 @@ export function SearchBar() {
 
   const pickSort = (value: string) => {
     setSort(value);
-    if (keyword.trim()) navigate({ sort: value });
+    if (currentQuery.trim()) navigate({ sort: value });
   };
 
   const pickDate = (idx: number) => {
     const gte = resolveGte(datePresets[idx]);
     setGteDate(gte);
     setActiveDateIdx(idx);
-    if (keyword.trim()) navigate({ gte });
+    if (currentQuery.trim()) navigate({ gte });
   };
 
-  const pickKeyword = (kw: string) => {
-    setKeyword(kw);
-    navigate({ q: kw });
+  const toggleChip = (kw: string) => {
+    const next = new Set(selectedChips);
+    if (next.has(kw)) {
+      next.delete(kw);
+    } else {
+      next.add(kw);
+    }
+    setSelectedChips(next);
+    const q = buildQuery(next, freeText);
+    if (q.trim()) navigate({ q });
   };
 
   return (
     <div className="space-y-4">
-      {/* search input */}
       <form onSubmit={onSubmit} className="flex gap-2">
         <input
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
+          value={freeText}
+          onChange={(e) => setFreeText(e.target.value)}
           placeholder="作品名・女優名で検索"
           className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm outline-none transition-colors placeholder:text-neutral-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
         />
@@ -154,25 +196,30 @@ export function SearchBar() {
         </div>
       </div>
 
-      {/* quick keyword chips */}
-      <div className="space-y-1.5">
-        <span className="text-[11px] font-medium tracking-wide text-neutral-500">クイック検索</span>
-        <div className="flex flex-wrap gap-1.5">
-          {quickKeywords.map((kw) => (
-            <button
-              key={kw}
-              type="button"
-              onClick={() => pickKeyword(kw)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                keyword === kw
-                  ? "border-pink-500/50 bg-pink-500/15 text-pink-300"
-                  : "border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
-              }`}
-            >
-              {kw}
-            </button>
-          ))}
-        </div>
+      {/* quick keyword chips — grouped */}
+      <div className="space-y-3">
+        <span className="text-[11px] font-medium tracking-wide text-neutral-500">クイック検索（複数選択可）</span>
+        {quickKeywordGroups.map((group) => (
+          <div key={group.label} className="space-y-1">
+            <span className="text-[10px] text-neutral-600">{group.label}</span>
+            <div className="flex flex-wrap gap-1.5">
+              {group.keywords.map((kw) => (
+                <button
+                  key={kw}
+                  type="button"
+                  onClick={() => toggleChip(kw)}
+                  className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                    selectedChips.has(kw)
+                      ? "border-pink-500/60 bg-pink-500/20 text-pink-300"
+                      : "border-neutral-700/60 text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"
+                  }`}
+                >
+                  {kw}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

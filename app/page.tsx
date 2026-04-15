@@ -21,13 +21,20 @@ export default async function Home({ searchParams }: HomeProps) {
   const gteDate = params.gte_date ?? "";
 
   const resolvedPage = Number.isNaN(page) || page < 1 ? 1 : page;
-  const result = q
+  const raw = q
     ? await searchFanza({
         keyword: q,
         page: resolvedPage,
         sort,
         ...(gteDate ? { gteDate } : {}),
       })
+    : null;
+
+  const result = raw
+    ? {
+        ...raw,
+        items: raw.items.filter((item) => item.sampleVideoUrl),
+      }
     : null;
 
   const createPageHref = (nextPage: number) => {
