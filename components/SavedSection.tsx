@@ -3,7 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { useFavorites, useHistory, type SavedItem } from "@/lib/useStorage";
+import { useFavorites, useHistory } from "@/lib/useStorage";
+import type { SavedItem } from "@/lib/savedItem";
+import { CollectionCapacityMeter } from "@/components/CollectionCapacity";
 
 function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void }) {
   return (
@@ -48,7 +50,7 @@ function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void })
 }
 
 export function FavoritesSection() {
-  const { items, toggle } = useFavorites();
+  const { items, toggle, capacity, isSynced } = useFavorites();
   if (items.length === 0) return null;
 
   return (
@@ -58,7 +60,9 @@ export function FavoritesSection() {
           <span className="mr-1.5 text-red-400">♥</span>お気に入り
           <span className="ml-1.5 text-xs text-neutral-500">({items.length})</span>
         </h2>
+        <span className="text-xs text-neutral-500">{isSynced ? "同期中" : "この端末のみ"}</span>
       </div>
+      <CollectionCapacityMeter capacity={capacity} />
       <div className="grid gap-2 sm:grid-cols-2">
         {items.slice(0, 10).map((item) => (
           <ItemRow

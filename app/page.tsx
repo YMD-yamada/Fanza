@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AccountPanel } from "@/components/AccountPanel";
 import { ItemCard } from "@/components/ItemCard";
 import { FavoritesSection, HistorySection } from "@/components/SavedSection";
 import { SearchBar } from "@/components/SearchBar";
@@ -94,6 +95,7 @@ export default async function Home({ searchParams }: HomeProps) {
         </p>
       </section>
 
+      <AccountPanel />
       <SearchBar />
 
       {!q && (

@@ -44,6 +44,9 @@ export default function RootLayout({
             </nav>
           </div>
         </header>
+        <div className="border-b border-red-700/30 bg-red-950/40 px-4 py-2 text-center text-xs text-red-200">
+          R18: 18歳未満は利用できません。
+        </div>
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
           {children}
         </main>

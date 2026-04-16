@@ -3,6 +3,9 @@ export default function TermsPage() {
     <div className="space-y-4 text-sm leading-7 text-neutral-200">
       <h1 className="text-2xl font-bold">利用規約</h1>
       <p>
+        本サービスは18歳以上の成人向けコンテンツを含みます。18歳未満の方は利用できません。
+      </p>
+      <p>
         本サービスはFanza APIの提供情報をもとに作品検索機能を提供します。掲載情報は予告なく変更される場合があります。
       </p>
       <p>

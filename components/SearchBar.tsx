@@ -64,8 +64,8 @@ const quickKeywordGroups = [
 /* ------------------------------------------------------------------ */
 
 function resolveGte(preset: (typeof datePresets)[number]): string {
-  if (preset.gte === "") return "";
-  return typeof preset.gte === "function" ? preset.gte() : preset.gte;
+  if (typeof preset.gte === "function") return preset.gte();
+  return preset.gte;
 }
 
 function matchDatePreset(gteDate: string): number {
