@@ -7,7 +7,6 @@ import { RecordHistory } from "@/components/RecordHistory";
 import { VideoPreview } from "@/components/VideoPreview";
 import { SafeDetailImage, SafeSampleImage } from "@/components/SafeMedia";
 import { getFanzaItemById } from "@/lib/fanza";
-import { getPrivateModeFromCookie } from "@/lib/privateMode";
 
 type ItemDetailProps = {
   params: Promise<{ id: string }>;
@@ -17,7 +16,6 @@ type ItemDetailProps = {
 export default async function ItemDetailPage({ params, searchParams }: ItemDetailProps) {
   const { id } = await params;
   const detailParams = await searchParams;
-  const privateMode = await getPrivateModeFromCookie();
   const returnTo = detailParams.returnTo;
   const backHref =
     returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/";
@@ -40,7 +38,6 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
         {/* package image — contain, not cover, so nothing is cropped */}
         <div className="flex justify-center md:justify-start">
           <SafeDetailImage
-            privateMode={privateMode}
             imageUrl={item.largeImageUrl ?? item.packageImageUrl}
             alt={item.title}
             className="h-auto max-h-[480px] w-auto rounded-xl border border-neutral-700 object-contain"
@@ -121,7 +118,7 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
       {item.sampleVideoUrl && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">サンプル動画</h2>
-          <VideoPreview url={item.sampleVideoUrl} privateMode={privateMode} />
+          <VideoPreview url={item.sampleVideoUrl} />
         </section>
       )}
 
@@ -132,7 +129,6 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
             {item.sampleImages.map((url, index) => (
               <div key={`${url}-${index}`} className="relative aspect-video overflow-hidden rounded-lg border border-neutral-700">
                 <SafeSampleImage
-                  privateMode={privateMode}
                   imageUrl={url}
                   alt={`${item.title} sample ${index + 1}`}
                   fill

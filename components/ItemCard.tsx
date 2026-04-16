@@ -3,12 +3,11 @@ import Link from "next/link";
 import type { NormalizedItem } from "@/lib/types";
 import { AffiliateButton } from "@/components/AffiliateButton";
 import { FavoriteButton } from "@/components/FavoriteButton";
-import { SafeThumbnail } from "@/components/SafeMedia";
+import { ItemCardThumbnail } from "@/components/ItemCardThumbnail";
 
 type ItemCardProps = {
   item: NormalizedItem;
   returnTo?: string;
-  privateMode?: boolean;
 };
 
 function StarRating({ avg, count }: { avg: number; count?: number }) {
@@ -23,7 +22,7 @@ function StarRating({ avg, count }: { avg: number; count?: number }) {
   );
 }
 
-export function ItemCard({ item, returnTo, privateMode = false }: ItemCardProps) {
+export function ItemCard({ item, returnTo }: ItemCardProps) {
   const detailPath = `/items/${encodeURIComponent(item.id)}`;
   const detailHref = returnTo
     ? {
@@ -39,12 +38,9 @@ export function ItemCard({ item, returnTo, privateMode = false }: ItemCardProps)
         href={detailHref}
         className="relative mx-auto h-44 w-32 shrink-0 overflow-hidden rounded-lg border border-neutral-700 sm:h-52 sm:w-36 md:mx-0"
       >
-        <SafeThumbnail
+        <ItemCardThumbnail
           src={item.packageImageUrl}
           alt={item.title}
-          privateMode={privateMode}
-          fallbackText={privateMode ? "SAFE MODE" : "NO IMAGE"}
-          fill
           sizes="(max-width: 640px) 128px, 140px"
           className="object-cover transition-transform group-hover:scale-105"
         />

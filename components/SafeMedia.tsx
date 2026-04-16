@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 
+import { usePrivateModeEnabled } from "@/components/usePrivateMode";
+
 const SAFETY_IMAGE = "/safe_mode_placeholder.svg";
 
 type SafeThumbnailProps = {
@@ -11,7 +13,6 @@ type SafeThumbnailProps = {
   fill?: boolean;
   sizes?: string;
   fallbackText?: string;
-  privateMode?: boolean;
 };
 
 export function SafeThumbnail({
@@ -21,8 +22,8 @@ export function SafeThumbnail({
   fill = true,
   sizes,
   fallbackText = "NO IMAGE",
-  privateMode = false,
 }: SafeThumbnailProps) {
+  const privateMode = usePrivateModeEnabled();
   const resolvedSrc = privateMode ? SAFETY_IMAGE : src;
   if (!resolvedSrc) {
     return (
@@ -51,18 +52,17 @@ export function SafeThumbnail({
 }
 
 type SafeDetailImageProps = {
-  privateMode: boolean;
   imageUrl?: string;
   alt: string;
   className?: string;
 };
 
 export function SafeDetailImage({
-  privateMode,
   imageUrl,
   alt,
   className,
 }: SafeDetailImageProps) {
+  const privateMode = usePrivateModeEnabled();
   const src = privateMode ? SAFETY_IMAGE : imageUrl;
   if (!src) {
     return (
@@ -91,7 +91,6 @@ export function SafeDetailImage({
 }
 
 type SafeSampleImageProps = {
-  privateMode: boolean;
   imageUrl?: string;
   alt: string;
   fill?: boolean;
@@ -100,13 +99,13 @@ type SafeSampleImageProps = {
 };
 
 export function SafeSampleImage({
-  privateMode,
   imageUrl,
   alt,
   fill = true,
   className,
   sizes,
 }: SafeSampleImageProps) {
+  const privateMode = usePrivateModeEnabled();
   const src = privateMode ? SAFETY_IMAGE : imageUrl;
   if (!src) {
     return (

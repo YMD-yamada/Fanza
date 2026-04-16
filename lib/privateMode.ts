@@ -8,7 +8,14 @@ export function isPrivateModeValue(value: string | undefined): boolean {
 
 export function getPrivateModeClient(): boolean {
   if (typeof window === "undefined") return false;
-  return localStorage.getItem(PRIVATE_MODE_STORAGE_KEY) === "1";
+  const stored = localStorage.getItem(PRIVATE_MODE_STORAGE_KEY);
+  if (stored === "1") return true;
+  if (stored === "0") return false;
+
+  // If localStorage is not set yet (first hydration), fall back to the cookie flag.
+  const match = document.cookie.match(new RegExp(`(?:^|; )${PRIVATE_MODE_COOKIE_NAME}=([^;]*)`));
+  const cookieValue = match?.[1];
+  return isPrivateModeValue(cookieValue);
 }
 
 export function setPrivateModeClient(enabled: boolean) {

@@ -19,7 +19,6 @@ function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void })
           alt={item.title}
           sizes="44px"
           className="object-cover"
-          privateMode={false}
         />
       </Link>
       <div className="min-w-0 flex-1">

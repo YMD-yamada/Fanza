@@ -1,9 +1,13 @@
+"use client";
+
+import { usePrivateModeEnabled } from "@/components/usePrivateMode";
+
 type VideoPreviewProps = {
   url?: string;
-  privateMode?: boolean;
 };
 
-export function VideoPreview({ url, privateMode = false }: VideoPreviewProps) {
+export function VideoPreview({ url }: VideoPreviewProps) {
+  const privateMode = usePrivateModeEnabled();
   if (privateMode) {
     return (
       <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 text-sm text-neutral-300">

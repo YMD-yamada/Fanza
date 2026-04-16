@@ -1,17 +1,14 @@
 "use client";
 
-import { useState } from "react";
-
-import { getPrivateModeClient, setPrivateModeClient } from "@/lib/privateMode";
+import { setPrivateModeClient } from "@/lib/privateMode";
+import { usePrivateModeEnabled } from "@/components/usePrivateMode";
 
 export function PrivateModeToggle() {
-  const [enabled, setEnabled] = useState(() => getPrivateModeClient());
+  const enabled = usePrivateModeEnabled();
 
   const onToggle = () => {
     const next = !enabled;
-    setEnabled(next);
     setPrivateModeClient(next);
-    window.location.reload();
   };
 
   return (
