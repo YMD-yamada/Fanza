@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -6,6 +5,7 @@ import { AffiliateButton } from "@/components/AffiliateButton";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { RecordHistory } from "@/components/RecordHistory";
 import { VideoPreview } from "@/components/VideoPreview";
+import { SafeDetailImage, SafeSampleImage } from "@/components/SafeMedia";
 import { getFanzaItemById } from "@/lib/fanza";
 
 type ItemDetailProps = {
@@ -37,19 +37,11 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
       <section className="grid gap-6 rounded-xl border border-neutral-800 bg-neutral-900/80 p-5 md:grid-cols-[auto_1fr]">
         {/* package image — contain, not cover, so nothing is cropped */}
         <div className="flex justify-center md:justify-start">
-          {item.largeImageUrl || item.packageImageUrl ? (
-            <Image
-              src={item.largeImageUrl ?? item.packageImageUrl ?? ""}
-              alt={item.title}
-              width={420}
-              height={600}
-              className="h-auto max-h-[480px] w-auto rounded-xl border border-neutral-700 object-contain"
-            />
-          ) : (
-            <div className="flex h-64 w-44 items-center justify-center rounded-xl border border-neutral-700 bg-neutral-800 text-neutral-500">
-              NO IMAGE
-            </div>
-          )}
+          <SafeDetailImage
+            imageUrl={item.largeImageUrl ?? item.packageImageUrl}
+            alt={item.title}
+            className="h-auto max-h-[480px] w-auto rounded-xl border border-neutral-700 object-contain"
+          />
         </div>
 
         <div className="space-y-4">
@@ -136,8 +128,8 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {item.sampleImages.map((url, index) => (
               <div key={`${url}-${index}`} className="relative aspect-video overflow-hidden rounded-lg border border-neutral-700">
-                <Image
-                  src={url}
+                <SafeSampleImage
+                  imageUrl={url}
                   alt={`${item.title} sample ${index + 1}`}
                   fill
                   className="object-contain bg-neutral-900"
