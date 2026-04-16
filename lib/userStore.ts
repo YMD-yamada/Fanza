@@ -5,7 +5,13 @@ import path from "node:path";
 import type { SavedItem } from "@/lib/savedItem";
 import { clampFavorites } from "@/lib/savedItem";
 
-const DATA_DIR = path.join(process.cwd(), ".data");
+function resolveDataDir(): string {
+  const override = process.env.FANZA_APP_DATA_DIR?.trim();
+  if (override) return path.isAbsolute(override) ? override : path.join(process.cwd(), override);
+  return path.join(process.cwd(), ".data");
+}
+
+const DATA_DIR = resolveDataDir();
 const DATA_FILE = path.join(DATA_DIR, "users.json");
 
 type StoredUser = {
