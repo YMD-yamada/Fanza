@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 
+import { SafeThumbnail } from "@/components/SafeMedia";
 import { useFavorites, useHistory } from "@/lib/useStorage";
 import type { SavedItem } from "@/lib/savedItem";
 import { CollectionCapacityMeter } from "@/components/CollectionCapacity";
@@ -14,13 +14,13 @@ function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void })
         href={`/items/${encodeURIComponent(item.id)}`}
         className="relative h-16 w-11 shrink-0 overflow-hidden rounded border border-neutral-700"
       >
-        {item.imageUrl ? (
-          <Image src={item.imageUrl} alt={item.title} fill className="object-cover" sizes="44px" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-neutral-800 text-[8px] text-neutral-600">
-            N/A
-          </div>
-        )}
+        <SafeThumbnail
+          src={item.imageUrl}
+          alt={item.title}
+          sizes="44px"
+          className="object-cover"
+          privateMode={false}
+        />
       </Link>
       <div className="min-w-0 flex-1">
         <Link
@@ -54,8 +54,8 @@ export function FavoritesSection() {
   if (items.length === 0) return null;
 
   return (
-    <section className="space-y-2">
-      <div className="flex items-baseline justify-between">
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">
           <span className="mr-1.5 text-red-400">♥</span>お気に入り
           <span className="ml-1.5 text-xs text-neutral-500">({items.length})</span>
@@ -63,7 +63,7 @@ export function FavoritesSection() {
         <span className="text-xs text-neutral-500">{isSynced ? "同期中" : "この端末のみ"}</span>
       </div>
       <CollectionCapacityMeter capacity={capacity} />
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 md:grid-cols-2">
         {items.slice(0, 10).map((item) => (
           <ItemRow
             key={item.id}
@@ -86,11 +86,11 @@ export function HistorySection() {
   if (items.length === 0) return null;
 
   return (
-    <section className="space-y-2">
+    <section className="space-y-3">
       <h2 className="text-sm font-semibold">
         <span className="mr-1.5 text-neutral-500">◷</span>最近チェックした作品
       </h2>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 md:grid-cols-2">
         {items.slice(0, 8).map((item) => (
           <ItemRow key={item.id} item={item} />
         ))}

@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 
 import { AccountPanel } from "@/components/AccountPanel";
 import { ItemCard } from "@/components/ItemCard";
 import { FavoritesSection, HistorySection } from "@/components/SavedSection";
 import { SearchBar } from "@/components/SearchBar";
 import { searchFanza } from "@/lib/fanza";
+import { PRIVATE_MODE_COOKIE_NAME } from "@/lib/privateMode";
 
 type HomeProps = {
   searchParams: Promise<{
@@ -19,6 +21,8 @@ type HomeProps = {
 };
 
 export default async function Home({ searchParams }: HomeProps) {
+  const cookieStore = await cookies();
+  const privateMode = cookieStore.get(PRIVATE_MODE_COOKIE_NAME)?.value === "1";
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const page = Number(params.page ?? "1");
@@ -134,7 +138,7 @@ export default async function Home({ searchParams }: HomeProps) {
           ) : (
             <div className="grid gap-4">
               {result.items.map((item) => (
-                <ItemCard key={item.id} item={item} returnTo={returnTo} />
+                <ItemCard key={item.id} item={item} returnTo={returnTo} privateMode={privateMode} />
               ))}
             </div>
           )}

@@ -251,7 +251,7 @@ export function SearchBar() {
 
   return (
     <div className="space-y-4">
-      <form onSubmit={onSubmit} className="flex gap-2">
+      <form onSubmit={onSubmit} className="flex flex-col gap-2 sm:flex-row">
         <input
           value={freeText}
           onChange={(e) => setFreeText(e.target.value)}
@@ -260,7 +260,7 @@ export function SearchBar() {
         />
         <button
           type="submit"
-          className="rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-500 active:bg-sky-700"
+          className="rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-500 active:bg-sky-700 sm:w-auto"
         >
           検索
         </button>

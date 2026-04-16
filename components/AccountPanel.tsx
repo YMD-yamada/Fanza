@@ -102,9 +102,9 @@ export function AccountPanel() {
 
   if (session) {
     return (
-      <section className="space-y-2 rounded-xl border border-emerald-700/40 bg-emerald-950/30 p-4">
+      <section className="space-y-2 rounded-xl border border-emerald-700/40 bg-emerald-950/30 p-3 sm:p-4">
         <p className="text-xs text-emerald-300">ログイン中（同期ON）</p>
-        <p className="text-sm font-medium text-white">{session.email}</p>
+        <p className="break-all text-sm font-medium text-white">{session.email}</p>
         <button
           type="button"
           onClick={logout}
@@ -119,8 +119,8 @@ export function AccountPanel() {
   }
 
   return (
-    <section className="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-      <div className="flex items-center justify-between">
+    <section className="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 sm:p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-white">アカウント（任意）</h2>
         <div className="flex gap-1 rounded-md bg-neutral-800 p-1 text-xs">
           <button

@@ -1,13 +1,14 @@
-import Image from "next/image";
 import Link from "next/link";
 
 import type { NormalizedItem } from "@/lib/types";
 import { AffiliateButton } from "@/components/AffiliateButton";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { SafeThumbnail } from "@/components/SafeMedia";
 
 type ItemCardProps = {
   item: NormalizedItem;
   returnTo?: string;
+  privateMode?: boolean;
 };
 
 function StarRating({ avg, count }: { avg: number; count?: number }) {
@@ -22,7 +23,7 @@ function StarRating({ avg, count }: { avg: number; count?: number }) {
   );
 }
 
-export function ItemCard({ item, returnTo }: ItemCardProps) {
+export function ItemCard({ item, returnTo, privateMode = false }: ItemCardProps) {
   const detailPath = `/items/${encodeURIComponent(item.id)}`;
   const detailHref = returnTo
     ? {
@@ -32,25 +33,21 @@ export function ItemCard({ item, returnTo }: ItemCardProps) {
     : detailPath;
 
   return (
-    <article className="group grid gap-4 rounded-xl border border-neutral-800 bg-neutral-900/80 p-4 transition-colors hover:border-neutral-700 md:grid-cols-[140px_1fr]">
+    <article className="group grid gap-3 rounded-xl border border-neutral-800 bg-neutral-900/80 p-3 transition-colors hover:border-neutral-700 sm:gap-4 sm:p-4 md:grid-cols-[140px_1fr]">
       {/* thumbnail */}
       <Link
         href={detailHref}
-        className="relative mx-auto h-52 w-36 shrink-0 overflow-hidden rounded-lg border border-neutral-700 md:mx-0"
+        className="relative mx-auto h-44 w-32 shrink-0 overflow-hidden rounded-lg border border-neutral-700 sm:h-52 sm:w-36 md:mx-0"
       >
-        {item.packageImageUrl ? (
-          <Image
-            src={item.packageImageUrl}
-            alt={item.title}
-            fill
-            className="object-cover transition-transform group-hover:scale-105"
-            sizes="140px"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center bg-neutral-800 text-xs text-neutral-500">
-            NO IMAGE
-          </div>
-        )}
+        <SafeThumbnail
+          src={item.packageImageUrl}
+          alt={item.title}
+          privateMode={privateMode}
+          fallbackText={privateMode ? "SAFE MODE" : "NO IMAGE"}
+          fill
+          sizes="(max-width: 640px) 128px, 140px"
+          className="object-cover transition-transform group-hover:scale-105"
+        />
       </Link>
 
       {/* info */}
@@ -58,7 +55,7 @@ export function ItemCard({ item, returnTo }: ItemCardProps) {
         <div className="flex items-start gap-2">
           <Link
             href={detailHref}
-            className="line-clamp-2 min-w-0 flex-1 text-[15px] font-semibold leading-snug hover:text-sky-400"
+            className="line-clamp-2 min-w-0 flex-1 text-sm font-semibold leading-snug hover:text-sky-400 sm:text-[15px]"
           >
             {item.title}
           </Link>
@@ -98,10 +95,10 @@ export function ItemCard({ item, returnTo }: ItemCardProps) {
         </div>
 
         {/* actions */}
-        <div className="mt-auto flex flex-wrap gap-2 pt-1">
+        <div className="mt-auto flex flex-wrap gap-1.5 pt-1 sm:gap-2">
           <Link
             href={detailHref}
-            className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-neutral-800"
+            className="rounded-lg border border-neutral-700 px-2.5 py-1.5 text-[11px] font-medium transition-colors hover:bg-neutral-800 sm:px-3 sm:text-xs"
           >
             詳細
           </Link>
@@ -110,7 +107,7 @@ export function ItemCard({ item, returnTo }: ItemCardProps) {
               href={item.sampleVideoUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-neutral-800"
+              className="rounded-lg border border-neutral-700 px-2.5 py-1.5 text-[11px] font-medium transition-colors hover:bg-neutral-800 sm:px-3 sm:text-xs"
             >
               サンプル動画
             </Link>
