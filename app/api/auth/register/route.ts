@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createPasswordHash, createUserSession, getCurrentUser } from "@/lib/auth";
 import { validateAuthPayload } from "@/lib/authShared";
+import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 import { createStoredUser } from "@/lib/userStore";
 
 export async function POST(request: NextRequest) {
+  if (!isAccountSyncEnabled()) {
+    return NextResponse.json({ message: "この環境ではアカウント同期は無効です。" }, { status: 404 });
+  }
   const currentUser = await getCurrentUser();
   if (currentUser) {
     return NextResponse.json(

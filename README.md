@@ -53,7 +53,9 @@ npm run dev
 
 `.env.example` と同じキーをホスティング側の「環境変数」に設定してください。`DMM_API_ID` と `DMM_AFFILIATE_ID` は必須です。
 
-任意アカウント・お気に入り同期は **サーバー上の JSON ファイル**（既定ではプロジェクト直下の `.data/users.json`）に保存されます。パスを変えたい場合は `FANZA_APP_DATA_DIR` を設定してください（相対パスはプロジェクトルートからの相対、推奨は絶対パス）。
+`NEXT_PUBLIC_ENABLE_ACCOUNT_SYNC` は既定で `0`（無効）です。**無料で軽く運用する推奨設定はこのまま**です。この場合、お気に入りは端末ローカル保存のみで、同期 API は使いません。
+
+任意アカウント・お気に入り同期を使う場合のみ `NEXT_PUBLIC_ENABLE_ACCOUNT_SYNC=1` にし、データ保存先として **サーバー上の JSON ファイル**（既定ではプロジェクト直下の `.data/users.json`）を永続化してください。パスを変えたい場合は `FANZA_APP_DATA_DIR` を設定してください（相対パスはプロジェクトルートからの相対、推奨は絶対パス）。
 
 ### Docker（VPS など）
 
@@ -67,13 +69,15 @@ docker run -d --name fanza-web -p 3000:3000 \
   fanza-web
 ```
 
-イメージ内では `FANZA_APP_DATA_DIR=/data` を既定にしており、`-v` でマウントしたボリュームにお気に入り同期データが残ります。
+イメージ内では `FANZA_APP_DATA_DIR=/data` を既定にしており、`-v` でマウントしたボリュームにお気に入り同期データが残ります。同期を使う場合は `--env NEXT_PUBLIC_ENABLE_ACCOUNT_SYNC=1` も設定してください。
 
 ### Vercel などのサーバーレス
 
 検索・詳細はサーバー側で DMM API を呼び出します。**Edge ではなく Node のサーバーレス**で動かしてください。
 
-ファイル保存型のログイン／同期は、**インスタンス間でディスクが共有されない**とデータが分散したり消えたりします。サーバーレスだけで運用する場合は、後続で DB（Supabase / PlanetScale / DynamoDB 等）に移すか、同期機能をオフにする運用を検討してください。HTTPS 上ではセッション Cookie が `Secure` になります（`NODE_ENV=production`）。
+このリポジトリは **デフォルトで同期 OFF（`NEXT_PUBLIC_ENABLE_ACCOUNT_SYNC=0`）** にしてあり、Vercel 無料枠でも安全に軽く運用できます。
+
+ファイル保存型のログイン／同期を ON にする場合、**インスタンス間でディスクが共有されない**とデータが分散したり消えたりします。サーバーレスだけで運用する場合は DB（Supabase など）移行を推奨します。HTTPS 上ではセッション Cookie が `Secure` になります（`NODE_ENV=production`）。
 
 ### GitHub Actions
 
