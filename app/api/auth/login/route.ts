@@ -5,12 +5,20 @@ import {
   loginByEmailAndPassword,
 } from "@/lib/auth";
 import { sanitizeEmail } from "@/lib/authShared";
+import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 
 function badRequest(message: string) {
   return NextResponse.json({ message }, { status: 400 });
 }
 
 export async function POST(request: NextRequest) {
+  if (!isAccountSyncEnabled()) {
+    return NextResponse.json(
+      { message: "この公開環境ではアカウント同期は無効です。" },
+      { status: 403 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();

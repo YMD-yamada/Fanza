@@ -2,11 +2,13 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
+import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 import { notifyAuthChanged } from "@/lib/useStorage";
 
 type Mode = "login" | "register";
 
 const PASSWORD_MIN = 8;
+const ACCOUNT_SYNC_ENABLED = isAccountSyncEnabled();
 
 type SessionUser = {
   id: string;
@@ -15,6 +17,22 @@ type SessionUser = {
 };
 
 export function AccountPanel() {
+  if (!ACCOUNT_SYNC_ENABLED) {
+    return (
+      <section className="space-y-2 rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 sm:p-4">
+        <h2 className="text-sm font-semibold text-white">アカウント同期</h2>
+        <p className="text-xs text-neutral-400">
+          現在の公開設定では、軽量運用のため端末内保存のみ有効です。
+        </p>
+      </section>
+    );
+  }
+
+  return <AccountPanelEnabled />;
+}
+
+function AccountPanelEnabled() {
+
   const [session, setSession] = useState<SessionUser | null>(null);
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");

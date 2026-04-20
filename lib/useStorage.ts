@@ -9,11 +9,13 @@ import {
   type SavedItemInput,
   sanitizeSavedItems,
 } from "@/lib/savedItem";
+import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 
 const FAVORITES_KEY = "fanza_favorites";
 const HISTORY_KEY = "fanza_history";
 const MAX_HISTORY = 50;
 const SYNC_MARKER = "fanza_favorites_synced_user";
+const ACCOUNT_SYNC_ENABLED = isAccountSyncEnabled();
 
 type AuthUser = {
   id: string;
@@ -82,9 +84,15 @@ function notifyFavoritesChanged() {
 }
 
 export function useAuthState() {
-  const [state, setState] = useState<AuthState>({ status: "loading", user: null });
+  const [state, setState] = useState<AuthState>(
+    ACCOUNT_SYNC_ENABLED ? { status: "loading", user: null } : { status: "guest", user: null },
+  );
 
   const refresh = useCallback(async (setLoading = false) => {
+    if (!ACCOUNT_SYNC_ENABLED) {
+      setState({ status: "guest", user: null });
+      return;
+    }
     if (setLoading) {
       setState({ status: "loading", user: null });
     }
@@ -102,6 +110,7 @@ export function useAuthState() {
   }, []);
 
   useEffect(() => {
+    if (!ACCOUNT_SYNC_ENABLED) return;
     setTimeout(() => {
       void refresh(true);
     }, 0);
@@ -127,6 +136,11 @@ export function useFavorites() {
   const [remoteLoaded, setRemoteLoaded] = useState(false);
 
   const refreshRemote = useCallback(async () => {
+    if (!ACCOUNT_SYNC_ENABLED) {
+      setRemoteItems([]);
+      setRemoteLoaded(false);
+      return;
+    }
     if (!user) {
       setRemoteItems([]);
       setRemoteLoaded(false);
@@ -147,7 +161,7 @@ export function useFavorites() {
 
   useEffect(() => {
     setTimeout(() => {
-      if (status !== "authenticated" || !user) {
+      if (!ACCOUNT_SYNC_ENABLED || status !== "authenticated" || !user) {
         setRemoteLoaded(false);
         setRemoteItems([]);
         return;
@@ -159,6 +173,7 @@ export function useFavorites() {
   useEffect(() => subscribeEvent(FAVORITES_EVENT, () => void refreshRemote()), [refreshRemote]);
 
   useEffect(() => {
+    if (!ACCOUNT_SYNC_ENABLED) return;
     if (!user) return;
     const marker = localStorage.getItem(SYNC_MARKER);
     if (marker === user.id) return;
@@ -197,7 +212,7 @@ export function useFavorites() {
 
   const saveRemote = useCallback(
     async (favorites: SavedItem[]) => {
-      if (!(status === "authenticated" && user)) return;
+      if (!ACCOUNT_SYNC_ENABLED || !(status === "authenticated" && user)) return;
       try {
         const response = await fetch("/api/favorites", {
           method: "PUT",
@@ -220,7 +235,7 @@ export function useFavorites() {
     (entry: SavedItemInput) => {
       const next = upsertFavorite(items, entry);
       writeStore(FAVORITES_KEY, next);
-      if (status === "authenticated" && user) {
+      if (ACCOUNT_SYNC_ENABLED && status === "authenticated" && user) {
         void saveRemote(next);
       } else {
         notifyFavoritesChanged();
@@ -241,7 +256,7 @@ export function useFavorites() {
     items,
     isFav,
     toggle,
-    isSynced: status === "authenticated" && Boolean(user),
+    isSynced: ACCOUNT_SYNC_ENABLED && status === "authenticated" && Boolean(user),
     capacity,
   };
 }

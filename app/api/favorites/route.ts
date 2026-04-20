@@ -5,6 +5,7 @@ import {
   getFavoritesCapacity,
   type AuthUser,
 } from "@/lib/auth";
+import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 import { clampFavorites, estimateFavoritesSizeBytes, parseSavedItems } from "@/lib/savedItem";
 import {
   getUserFavorites,
@@ -22,7 +23,15 @@ async function readAuthUser(): Promise<AuthUser | null> {
   return getCurrentUser();
 }
 
+function syncDisabled() {
+  return NextResponse.json(
+    { message: "アカウント同期は現在無効です。" },
+    { status: 404 },
+  );
+}
+
 export async function GET() {
+  if (!isAccountSyncEnabled()) return syncDisabled();
   const user = await readAuthUser();
   if (!user) return unauthorized();
 
@@ -44,6 +53,7 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  if (!isAccountSyncEnabled()) return syncDisabled();
   const user = await readAuthUser();
   if (!user) return unauthorized();
 
