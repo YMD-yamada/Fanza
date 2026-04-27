@@ -48,12 +48,12 @@ export default async function Home({ searchParams }: HomeProps) {
   const filteredItems = raw != null ? filterNormalizedItems(raw.items, clientFilters) : [];
 
   const badges: { label: string; cls: string }[] = [];
-  if (gteDate) badges.push({ label: `${gteDate.slice(0, 10)}〜`, cls: "bg-violet-500/15 text-violet-300" });
+  if (gteDate) badges.push({ label: `${gteDate.slice(0, 10)}?`, cls: "bg-violet-500/15 text-violet-300" });
   if (pMin > 0 || pMax > 0) {
-    const label = pMin > 0 && pMax > 0 ? `${pMin}〜${pMax}円` : pMax > 0 ? `〜${pMax}円` : `${pMin}円〜`;
+    const label = pMin > 0 && pMax > 0 ? `${pMin}?${pMax}?` : pMax > 0 ? `?${pMax}?` : `${pMin}??`;
     badges.push({ label, cls: "bg-emerald-500/15 text-emerald-300" });
   }
-  if (hasVideo) badges.push({ label: "動画あり", cls: "bg-amber-500/15 text-amber-300" });
+  if (hasVideo) badges.push({ label: "????", cls: "bg-amber-500/15 text-amber-300" });
 
   const tabParams = {
     q,
@@ -69,20 +69,20 @@ export default async function Home({ searchParams }: HomeProps) {
   return (
     <div className="space-y-6">
       <section className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Fanza 検索ナビ</h1>
-        <p className="text-sm text-neutral-400">画像・サンプル動画・購入リンクを1画面で確認</p>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Fanza ????</h1>
+        <p className="text-sm text-neutral-400">????????????????1?????</p>
       </section>
 
       <AccountPanel />
       <CatalogTabs active={catalog} tabParams={tabParams} />
-      <SearchBar />
+      <SearchBar key={`searchbar-${catalog}`} />
 
       {!q && (
         <>
           <FavoritesSection />
           <HistorySection />
           <section className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-5 py-8 text-center text-sm text-neutral-400">
-            キーワードを入力するか、クイック検索から選んでください
+            ???????????????????????????
           </section>
         </>
       )}
@@ -99,7 +99,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
           {filteredItems.length === 0 && !raw.hasNext ? (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-5 py-8 text-center text-sm text-neutral-400">
-              該当する作品が見つかりませんでした（フィルタで除外された可能性があります）
+              ?????????????????????????????????????
             </div>
           ) : (
             <SearchResultsInfinite

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import { ApiCredit } from "@/components/ApiCredit";
 import { PrivateModeToggle } from "@/components/PrivateModeToggle";
 import "./globals.css";
 
@@ -51,6 +52,7 @@ export default function RootLayout({
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
           {children}
         </main>
+        <ApiCredit />
         <PrivateModeToggle />
       </body>
     </html>
