@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { memo } from "react";
 
 import type { CatalogId } from "@/lib/catalogs";
 import { itemDetailPath } from "@/lib/item-link";
@@ -23,7 +24,7 @@ function StarRating({ avg, count }: { avg: number; count?: number }) {
   );
 }
 
-export function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
+export const ItemCard = memo(function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
   const detailPath = itemDetailPath(item.id, catalog);
   const detailHref = returnTo
     ? {
@@ -113,4 +114,4 @@ export function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
       </div>
     </article>
   );
-}
+});
