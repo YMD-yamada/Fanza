@@ -11,15 +11,11 @@ export type CatalogTabParams = {
   has_video?: string;
 };
 
-function buildHref(cat: CatalogId, p: CatalogTabParams): string {
+function buildHref(cat: CatalogId): string {
   const params = new URLSearchParams();
   params.set("cat", cat);
-  if (p.q?.trim()) params.set("q", p.q.trim());
-  if (p.sort) params.set("sort", p.sort);
-  if (p.gte_date) params.set("gte_date", p.gte_date);
-  if (p.price_min) params.set("price_min", p.price_min);
-  if (p.price_max) params.set("price_max", p.price_max);
-  if (p.has_video === "1") params.set("has_video", "1");
+  // タブ切り替え時は、前タブの検索条件を引き継がない。
+  // カテゴリごとに条件の意味が異なるため、UXとして都度リセットする。
   return `/?${params.toString()}`;
 }
 
@@ -30,6 +26,7 @@ type Props = {
 
 export function CatalogTabs({ active, tabParams }: Props) {
   const ids = Object.keys(CATALOGS) as CatalogId[];
+  void tabParams;
 
   return (
     <nav className="flex flex-wrap gap-2 border-b border-neutral-800 pb-3">
@@ -39,7 +36,7 @@ export function CatalogTabs({ active, tabParams }: Props) {
         return (
           <Link
             key={id}
-            href={buildHref(id, tabParams)}
+            href={buildHref(id)}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
               isOn
                 ? "bg-sky-600 text-white"
