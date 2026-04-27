@@ -16,11 +16,9 @@ type ItemCardProps = {
 function StarRating({ avg, count }: { avg: number; count?: number }) {
   return (
     <span className="inline-flex items-center gap-1 text-sm">
-      <span className="text-yellow-400">{"��".repeat(Math.round(avg))}</span>
+      <span className="text-yellow-400">{"★".repeat(Math.round(avg))}</span>
       <span className="tabular-nums font-medium text-yellow-300">{avg.toFixed(1)}</span>
-      {count != null && (
-        <span className="text-neutral-500">({count})</span>
-      )}
+      {count != null && <span className="text-neutral-500">({count})</span>}
     </span>
   );
 }
@@ -36,7 +34,6 @@ export function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
 
   return (
     <article className="group grid gap-3 rounded-xl border border-neutral-800 bg-neutral-900/80 p-3 transition-colors hover:border-neutral-700 sm:gap-4 sm:p-4 md:grid-cols-[140px_1fr]">
-      {/* thumbnail */}
       <Link
         href={detailHref}
         className="relative mx-auto h-44 w-32 shrink-0 overflow-hidden rounded-lg border border-neutral-700 sm:h-52 sm:w-36 md:mx-0"
@@ -49,7 +46,6 @@ export function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
         />
       </Link>
 
-      {/* info */}
       <div className="flex min-w-0 flex-col gap-2">
         <div className="flex items-start gap-2">
           <Link
@@ -68,9 +64,7 @@ export function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
         </div>
 
         {item.actressNames.length > 0 && (
-          <p className="text-sm text-neutral-300">
-            {item.actressNames.join("�A")}
-          </p>
+          <p className="text-sm text-neutral-300">{item.actressNames.join("、")}</p>
         )}
 
         {item.genres.length > 0 && (
@@ -89,18 +83,15 @@ export function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-400">
           {item.releaseDate && <span>{item.releaseDate.slice(0, 10)}</span>}
           {item.listPrice && <span>{item.listPrice}</span>}
-          {item.reviewAverage != null && (
-            <StarRating avg={item.reviewAverage} count={item.reviewCount} />
-          )}
+          {item.reviewAverage != null && <StarRating avg={item.reviewAverage} count={item.reviewCount} />}
         </div>
 
-        {/* actions */}
         <div className="mt-auto flex flex-wrap gap-1.5 pt-1 sm:gap-2">
           <Link
             href={detailHref}
             className="rounded-lg border border-neutral-700 px-2.5 py-1.5 text-[11px] font-medium transition-colors hover:bg-neutral-800 sm:px-3 sm:text-xs"
           >
-            �ڍ�
+            詳細
           </Link>
           {item.sampleVideoUrl && (
             <Link
@@ -109,7 +100,7 @@ export function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
               rel="noopener noreferrer"
               className="rounded-lg border border-neutral-700 px-2.5 py-1.5 text-[11px] font-medium transition-colors hover:bg-neutral-800 sm:px-3 sm:text-xs"
             >
-              �T���v������
+              サンプル動画
             </Link>
           )}
           <AffiliateButton
