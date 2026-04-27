@@ -1,26 +1,28 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 
+import { CollectionCapacityMeter } from "@/components/CollectionCapacity";
+import { SafeThumbnail } from "@/components/SafeMedia";
 import { itemDetailPath } from "@/lib/item-link";
-import { useFavorites, useHistory, type SavedItem } from "@/lib/useStorage";
+import type { SavedItem } from "@/lib/savedItem";
+import { useFavorites, useHistory } from "@/lib/useStorage";
 
 function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void }) {
   const href = itemDetailPath(item.id, item.catalog);
+
   return (
     <div className="group flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-900/60 p-2 transition-colors hover:border-neutral-700">
       <Link
         href={href}
         className="relative h-16 w-11 shrink-0 overflow-hidden rounded border border-neutral-700"
       >
-        {item.imageUrl ? (
-          <Image src={item.imageUrl} alt={item.title} fill className="object-cover" sizes="44px" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-neutral-800 text-[8px] text-neutral-600">
-            N/A
-          </div>
-        )}
+        <SafeThumbnail
+          src={item.imageUrl}
+          alt={item.title}
+          sizes="44px"
+          className="object-cover"
+        />
       </Link>
       <div className="min-w-0 flex-1">
         <Link
@@ -31,7 +33,7 @@ function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void })
         </Link>
         {item.actressNames.length > 0 && (
           <p className="line-clamp-1 text-xs text-neutral-500">
-            {item.actressNames.join("ã€")}
+            {item.actressNames.join("A")}
           </p>
         )}
       </div>
@@ -40,9 +42,9 @@ function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void })
           type="button"
           onClick={onRemove}
           className="shrink-0 rounded px-1.5 py-0.5 text-xs text-neutral-600 opacity-0 transition-opacity hover:text-neutral-300 group-hover:opacity-100"
-          title="å‰Šé™¤"
+          title="íœ"
         >
-          âœ•
+          ?
         </button>
       )}
     </div>
@@ -50,30 +52,38 @@ function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void })
 }
 
 export function FavoritesSection() {
-  const { items, toggle } = useFavorites();
+  const { items, toggle, capacity, isSynced } = useFavorites();
   if (items.length === 0) return null;
 
   return (
-    <section className="space-y-2">
-      <div className="flex items-baseline justify-between">
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">
-          <span className="mr-1.5 text-red-400">â™¥</span>ãŠæ°—ã«å…¥ã‚Š
+          <span className="mr-1.5 text-red-400">?</span>‚¨‹C‚É“ü‚è
           <span className="ml-1.5 text-xs text-neutral-500">({items.length})</span>
         </h2>
+        <span className="text-xs text-neutral-500">{isSynced ? "“¯Šú’†" : "‚±‚Ì’[––‚Ì‚İ"}</span>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <CollectionCapacityMeter capacity={capacity} />
+      <div className="grid gap-2 md:grid-cols-2">
         {items.slice(0, 10).map((item) => (
           <ItemRow
             key={item.id}
             item={item}
             onRemove={() =>
-              toggle({ id: item.id, title: item.title, imageUrl: item.imageUrl, actressNames: item.actressNames })
+              toggle({
+                id: item.id,
+                title: item.title,
+                imageUrl: item.imageUrl,
+                actressNames: item.actressNames,
+                catalog: item.catalog,
+              })
             }
           />
         ))}
       </div>
       {items.length > 10 && (
-        <p className="text-xs text-neutral-500">ä»– {items.length - 10} ä»¶</p>
+        <p className="text-xs text-neutral-500">‘¼ {items.length - 10} Œ</p>
       )}
     </section>
   );
@@ -84,11 +94,11 @@ export function HistorySection() {
   if (items.length === 0) return null;
 
   return (
-    <section className="space-y-2">
+    <section className="space-y-3">
       <h2 className="text-sm font-semibold">
-        <span className="mr-1.5 text-neutral-500">â—·</span>æœ€è¿‘ãƒã‚§ãƒƒã‚¯ã—ãŸä½œå“
+        <span className="mr-1.5 text-neutral-500">?</span>Å‹ßƒ`ƒFƒbƒN‚µ‚½ì•i
       </h2>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 md:grid-cols-2">
         {items.slice(0, 8).map((item) => (
           <ItemRow key={item.id} item={item} />
         ))}
