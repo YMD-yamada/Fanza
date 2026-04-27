@@ -16,6 +16,7 @@ type HomeProps = {
     price_max?: string;
     has_video?: string;
     cat?: string;
+    debug?: string;
   }>;
 };
 
@@ -28,6 +29,8 @@ export default async function Home({ searchParams }: HomeProps) {
   const pMax = Number(params.price_max ?? "") || 0;
   const hasVideo = params.has_video === "1";
   const catalog = getCatalog(params.cat).id;
+  const debug = params.debug === "1";
+  const buildVersion = (process.env.VERCEL_GIT_COMMIT_SHA ?? "local").slice(0, 7);
 
   const raw = q
     ? await searchFanza({
@@ -48,12 +51,12 @@ export default async function Home({ searchParams }: HomeProps) {
   const filteredItems = raw != null ? filterNormalizedItems(raw.items, clientFilters) : [];
 
   const badges: { label: string; cls: string }[] = [];
-  if (gteDate) badges.push({ label: `${gteDate.slice(0, 10)}?`, cls: "bg-violet-500/15 text-violet-300" });
+  if (gteDate) badges.push({ label: `${gteDate.slice(0, 10)}??`, cls: "bg-violet-500/15 text-violet-300" });
   if (pMin > 0 || pMax > 0) {
-    const label = pMin > 0 && pMax > 0 ? `${pMin}?${pMax}?` : pMax > 0 ? `?${pMax}?` : `${pMin}??`;
+    const label = pMin > 0 && pMax > 0 ? `${pMin}?${pMax}?` : pMax > 0 ?  `?${pMax}?` : `${pMin}??`;
     badges.push({ label, cls: "bg-emerald-500/15 text-emerald-300" });
   }
-  if (hasVideo) badges.push({ label: "????", cls: "bg-amber-500/15 text-amber-300" });
+  if (hasVideo) badges.push({ label: "????????", cls: "bg-amber-500/15 text-amber-300" });
 
   const tabParams = {
     q,
@@ -70,7 +73,10 @@ export default async function Home({ searchParams }: HomeProps) {
     <div className="space-y-6">
       <section className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Fanza ????</h1>
-        <p className="text-sm text-neutral-400">????????????????1?????</p>
+        <p className="text-sm text-neutral-400">?????????????????1??????????</p>
+        {debug && (
+          <p className="text-xs text-neutral-600">build: {buildVersion}</p>
+        )}
       </section>
 
       <AccountPanel />
@@ -82,7 +88,7 @@ export default async function Home({ searchParams }: HomeProps) {
           <FavoritesSection />
           <HistorySection />
           <section className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-5 py-8 text-center text-sm text-neutral-400">
-            ???????????????????????????
+            ???????????????????????
           </section>
         </>
       )}
@@ -99,7 +105,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
           {filteredItems.length === 0 && !raw.hasNext ? (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-5 py-8 text-center text-sm text-neutral-400">
-              ?????????????????????????????????????
+              ?????????????????????
             </div>
           ) : (
             <SearchResultsInfinite
