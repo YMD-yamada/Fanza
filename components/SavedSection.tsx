@@ -3,13 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { itemDetailPath } from "@/lib/item-link";
 import { useFavorites, useHistory, type SavedItem } from "@/lib/useStorage";
 
 function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void }) {
+  const href = itemDetailPath(item.id, item.catalog);
   return (
     <div className="group flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-900/60 p-2 transition-colors hover:border-neutral-700">
       <Link
-        href={`/items/${encodeURIComponent(item.id)}`}
+        href={href}
         className="relative h-16 w-11 shrink-0 overflow-hidden rounded border border-neutral-700"
       >
         {item.imageUrl ? (
@@ -22,7 +24,7 @@ function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void })
       </Link>
       <div className="min-w-0 flex-1">
         <Link
-          href={`/items/${encodeURIComponent(item.id)}`}
+          href={href}
           className="line-clamp-1 text-sm font-medium hover:text-sky-400"
         >
           {item.title}

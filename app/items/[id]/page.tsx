@@ -6,24 +6,31 @@ import { AffiliateButton } from "@/components/AffiliateButton";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { RecordHistory } from "@/components/RecordHistory";
 import { VideoPreview } from "@/components/VideoPreview";
+import { getCatalog } from "@/lib/catalogs";
 import { getFanzaItemById } from "@/lib/fanza";
 
 type ItemDetailProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ cat?: string }>;
 };
 
-export default async function ItemDetailPage({ params }: ItemDetailProps) {
+export default async function ItemDetailPage({ params, searchParams }: ItemDetailProps) {
   const { id } = await params;
-  const item = await getFanzaItemById(id);
+  const sp = await searchParams;
+  const catalog = getCatalog(sp.cat).id;
+
+  const item = await getFanzaItemById(id, catalog);
 
   if (!item) {
     notFound();
   }
 
+  const homeHref = catalog === "video" ? "/" : `/?cat=${catalog}`;
+
   return (
     <div className="space-y-6">
       <Link
-        href="/"
+        href={homeHref}
         className="inline-flex items-center gap-1 text-sm text-neutral-400 transition-colors hover:text-white"
       >
         ← 検索に戻る
@@ -53,6 +60,7 @@ export default async function ItemDetailPage({ params }: ItemDetailProps) {
             title={item.title}
             imageUrl={item.packageImageUrl}
             actressNames={item.actressNames}
+            catalog={catalog}
           />
           <div className="flex items-start gap-3">
             <h1 className="min-w-0 flex-1 text-xl font-bold leading-snug md:text-2xl">{item.title}</h1>
@@ -61,6 +69,7 @@ export default async function ItemDetailPage({ params }: ItemDetailProps) {
               title={item.title}
               imageUrl={item.packageImageUrl}
               actressNames={item.actressNames}
+              catalog={catalog}
               size="md"
             />
           </div>

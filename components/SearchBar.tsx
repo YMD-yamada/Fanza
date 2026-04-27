@@ -1,5 +1,6 @@
 "use client";
 
+import { getCatalog } from "@/lib/catalogs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useMemo, useState } from "react";
 
@@ -40,7 +41,7 @@ const pricePresets = [
   { label: "3000円〜", min: "3000", max: "" },
 ] as const;
 
-const quickKeywordGroups = [
+const videoQuickKeywordGroups = [
   {
     label: "体型・バスト",
     keywords: ["巨乳", "美乳", "爆乳", "貧乳・微乳", "スレンダー", "ぽっちゃり", "長身", "ミニ系"],
@@ -59,13 +60,44 @@ const quickKeywordGroups = [
   },
 ] as const;
 
+const doujinQuickKeywordGroups = [
+  {
+    label: "形式・媒体",
+    keywords: ["同人誌", "同人ゲーム", "CG集", "ボイス", "ASMR", "マンガ"],
+  },
+  {
+    label: "ジャンル",
+    keywords: ["RPG", "SLG", "アクション", "ADV", "シミュレーション", "育成", "乙女向け"],
+  },
+  {
+    label: "テーマ",
+    keywords: ["ファンタジー", "学園", "寝取り", "制服", "触手", "オリジナル", "フルカラー"],
+  },
+] as const;
+
+const gameQuickKeywordGroups = [
+  {
+    label: "ジャンル",
+    keywords: ["RPG", "SLG", "アクション", "ADV", "FPS", "TCG", "格闘"],
+  },
+  {
+    label: "プレイ",
+    keywords: ["ターン制", "リアルタイム", "Roguelike", "恋愛シミュ", "育成シム"],
+  },
+  {
+    label: "テーマ",
+    keywords: ["学園", "異世界", "同人", "フルボイス", "体験版あり"],
+  },
+] as const;
+
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
 function resolveGte(preset: (typeof datePresets)[number]): string {
-  if (preset.gte === "") return "";
-  return typeof preset.gte === "function" ? preset.gte() : preset.gte;
+  const g = preset.gte;
+  if (g === "") return "";
+  return typeof g === "function" ? g() : g;
 }
 
 function matchDatePreset(gteDate: string): number {
@@ -81,8 +113,11 @@ function matchPricePreset(pMin: string, pMax: string): number {
   return pricePresets.findIndex((p) => p.min === pMin && p.max === pMax);
 }
 
-function parseSelectedChips(q: string): Set<string> {
-  const all = quickKeywordGroups.flatMap((g) => g.keywords);
+function parseSelectedChips(
+  q: string,
+  groups: readonly { keywords: readonly string[] }[],
+): Set<string> {
+  const all = groups.flatMap((g) => g.keywords);
   const set = new Set<string>();
   for (const kw of all) {
     if (q.includes(kw)) set.add(kw);
@@ -149,6 +184,17 @@ function PillRow({
 export function SearchBar() {
   const router = useRouter();
   const sp = useSearchParams();
+  const catKey = sp.get("cat") ?? "";
+
+  const catalogSpec = useMemo(() => getCatalog(catKey || null), [catKey]);
+
+  const quickKeywordGroups =
+    catalogSpec.id === "doujin"
+      ? doujinQuickKeywordGroups
+      : catalogSpec.id === "game"
+        ? gameQuickKeywordGroups
+        : videoQuickKeywordGroups;
+
   const initialQ = sp.get("q") ?? "";
 
   const [freeText, setFreeText] = useState(() => {
@@ -157,7 +203,9 @@ export function SearchBar() {
     for (const kw of all) text = text.replaceAll(kw, "");
     return text.replace(/\s+/g, " ").trim();
   });
-  const [selectedChips, setSelectedChips] = useState<Set<string>>(() => parseSelectedChips(initialQ));
+  const [selectedChips, setSelectedChips] = useState(
+    () => parseSelectedChips(initialQ, quickKeywordGroups),
+  );
   const [sort, setSort] = useState(sp.get("sort") ?? "rank");
   const [gteDate, setGteDate] = useState(sp.get("gte_date") ?? "");
   const [activeDateIdx, setActiveDateIdx] = useState(() => matchDatePreset(sp.get("gte_date") ?? ""));
@@ -170,6 +218,13 @@ export function SearchBar() {
 
   const currentQuery = useMemo(() => buildQuery(selectedChips, freeText), [selectedChips, freeText]);
 
+  const placeholder =
+    catalogSpec.id === "doujin"
+      ? "タイトル・サークル名などで検索"
+      : catalogSpec.id === "game"
+        ? "タイトル・メーカー名などで検索"
+        : "作品名・女優名で検索";
+
   const navigate = useCallback(
     (overrides: {
       q?: string;
@@ -181,7 +236,7 @@ export function SearchBar() {
     }) => {
       const q = (overrides.q ?? currentQuery).trim();
       if (!q) {
-        router.push("/");
+        router.push(catalogSpec.id === "video" ? "/" : `/?cat=${catalogSpec.id}`);
         return;
       }
       const s = overrides.sort ?? sort;
@@ -191,16 +246,25 @@ export function SearchBar() {
       const hv = overrides.video ?? hasVideo;
 
       const params = new URLSearchParams();
+      params.set("cat", catalogSpec.id);
       params.set("q", q);
       params.set("sort", s);
-      params.set("page", "1");
       if (g) params.set("gte_date", g.includes("T") ? g : `${g}T00:00:00`);
       if (pmn) params.set("price_min", pmn);
       if (pmx) params.set("price_max", pmx);
       if (hv) params.set("has_video", "1");
       router.push(`/?${params.toString()}`);
     },
-    [currentQuery, sort, gteDate, priceMin, priceMax, hasVideo, router],
+    [
+      catalogSpec.id,
+      currentQuery,
+      sort,
+      gteDate,
+      priceMin,
+      priceMax,
+      hasVideo,
+      router,
+    ],
   );
 
   const onSubmit = (event: FormEvent) => {
@@ -255,7 +319,7 @@ export function SearchBar() {
         <input
           value={freeText}
           onChange={(e) => setFreeText(e.target.value)}
-          placeholder="作品名・女優名で検索"
+          placeholder={placeholder}
           className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm outline-none transition-colors placeholder:text-neutral-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
         />
         <button
@@ -270,34 +334,39 @@ export function SearchBar() {
       <PillRow label="公開時期" options={datePresets} activeIdx={activeDateIdx} color="violet" onPick={pickDate} />
       <PillRow label="価格帯" options={pricePresets} activeIdx={activePriceIdx} color="emerald" onPick={pickPrice} />
 
-      {/* video toggle */}
-      <div className="space-y-1.5">
-        <span className="text-[11px] font-medium tracking-wide text-neutral-500">サンプル動画</span>
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            onClick={() => { if (hasVideo) toggleVideo(); }}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              !hasVideo
-                ? "bg-amber-600 text-white"
-                : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
-            }`}
-          >
-            すべて
-          </button>
-          <button
-            type="button"
-            onClick={() => { if (!hasVideo) toggleVideo(); }}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              hasVideo
-                ? "bg-amber-600 text-white"
-                : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
-            }`}
-          >
-            動画ありのみ
-          </button>
+      {catalogSpec.supportsSampleVideo && (
+        <div className="space-y-1.5">
+          <span className="text-[11px] font-medium tracking-wide text-neutral-500">サンプル動画</span>
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                if (hasVideo) toggleVideo();
+              }}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                !hasVideo
+                  ? "bg-amber-600 text-white"
+                  : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
+              }`}
+            >
+              すべて
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!hasVideo) toggleVideo();
+              }}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                hasVideo
+                  ? "bg-amber-600 text-white"
+                  : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"
+              }`}
+            >
+              動画ありのみ
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* quick keyword chips */}
       <div className="space-y-3">

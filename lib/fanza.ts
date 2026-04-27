@@ -1,4 +1,5 @@
 import { buildAffiliateUrl, getAffiliateId } from "@/lib/affiliate";
+import { getCatalog, type CatalogId } from "@/lib/catalogs";
 import type { ArticleType, NormalizedItem, SearchFilters, SearchResponse } from "@/lib/types";
 
 const VALID_ARTICLES: ReadonlySet<ArticleType> = new Set([
@@ -13,9 +14,6 @@ function toApiDate(date: string, fallbackTime: string): string {
 
 const API_ENDPOINT = "https://api.dmm.com/affiliate/v3/ItemList";
 const DMM_API_ID = process.env.DMM_API_ID ?? "";
-const SITE = process.env.FANZA_SITE ?? "FANZA";
-const SERVICE = process.env.FANZA_SERVICE ?? "digital";
-const FLOOR = process.env.FANZA_FLOOR ?? "videoa";
 const DEFAULT_HITS = 8;
 const MAX_HITS = 12;
 const parsedHits = Number(process.env.FANZA_HITS ?? String(DEFAULT_HITS));
@@ -135,12 +133,13 @@ type RawSearchResult = {
 export async function searchFanza(filters: SearchFilters): Promise<SearchResponse> {
   ensureConfig();
 
+  const cat = getCatalog(filters.catalog);
   const params = new URLSearchParams({
     api_id: DMM_API_ID,
     affiliate_id: getAffiliateId(),
-    site: SITE,
-    service: SERVICE,
-    floor: FLOOR,
+    site: cat.site,
+    service: cat.service,
+    floor: cat.floor,
     keyword: filters.keyword,
     sort: filters.sort ?? "rank",
     output: "json",
@@ -182,11 +181,12 @@ export async function searchFanza(filters: SearchFilters): Promise<SearchRespons
   return { items, totalCount, page, hasNext };
 }
 
-export async function getFanzaItemById(contentId: string): Promise<NormalizedItem | null> {
+export async function getFanzaItemById(contentId: string, catalog?: CatalogId): Promise<NormalizedItem | null> {
   const result = await searchFanza({
     keyword: contentId,
     page: 1,
     sort: "rank",
+    ...(catalog ? { catalog } : {}),
   });
 
   return result.items.find((item) => item.id === contentId) ?? result.items[0] ?? null;

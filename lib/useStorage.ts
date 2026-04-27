@@ -1,5 +1,6 @@
 "use client";
 
+import type { CatalogId } from "@/lib/catalogs";
 import { useCallback, useSyncExternalStore } from "react";
 
 export type SavedItem = {
@@ -7,6 +8,8 @@ export type SavedItem = {
   title: string;
   imageUrl?: string;
   actressNames: string[];
+  /** お気に入り・履歴から詳細へ正しいフロアで開くために保持 */
+  catalog?: CatalogId;
   savedAt: number;
 };
 

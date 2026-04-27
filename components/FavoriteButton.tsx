@@ -1,5 +1,6 @@
 "use client";
 
+import type { CatalogId } from "@/lib/catalogs";
 import { useFavorites } from "@/lib/useStorage";
 
 type Props = {
@@ -7,17 +8,18 @@ type Props = {
   title: string;
   imageUrl?: string;
   actressNames: string[];
+  catalog?: CatalogId;
   size?: "sm" | "md";
 };
 
-export function FavoriteButton({ id, title, imageUrl, actressNames, size = "sm" }: Props) {
+export function FavoriteButton({ id, title, imageUrl, actressNames, catalog, size = "sm" }: Props) {
   const { isFav, toggle } = useFavorites();
   const active = isFav(id);
 
   return (
     <button
       type="button"
-      onClick={() => toggle({ id, title, imageUrl, actressNames })}
+      onClick={() => toggle({ id, title, imageUrl, actressNames, catalog })}
       title={active ? "お気に入り解除" : "お気に入り登録"}
       className={`inline-flex items-center justify-center rounded-lg border transition-colors ${
         active
