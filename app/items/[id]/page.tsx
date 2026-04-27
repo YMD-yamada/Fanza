@@ -36,7 +36,7 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
         href={backHref}
         className="inline-flex items-center gap-1 text-sm text-neutral-400 transition-colors hover:text-white"
       >
-        © ŒŸõ‚É–ß‚é
+        ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½É–ß‚ï¿½
       </Link>
 
       <section className="grid gap-6 rounded-xl border border-neutral-800 bg-neutral-900/80 p-5 md:grid-cols-[auto_1fr]">
@@ -75,13 +75,13 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
             {item.actressNames.length > 0 && (
               <>
-                <dt className="text-neutral-500">o‰‰</dt>
-                <dd className="text-neutral-200">{item.actressNames.join("A")}</dd>
+                <dt className="text-neutral-500">ï¿½oï¿½ï¿½</dt>
+                <dd className="text-neutral-200">{item.actressNames.join("ï¿½A")}</dd>
               </>
             )}
             {item.genres.length > 0 && (
               <>
-                <dt className="text-neutral-500">ƒWƒƒƒ“ƒ‹</dt>
+                <dt className="text-neutral-500">ï¿½Wï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</dt>
                 <dd className="flex flex-wrap gap-1">
                   {item.genres.map((g) => (
                     <span key={g} className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-neutral-300">
@@ -93,24 +93,24 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
             )}
             {item.releaseDate && (
               <>
-                <dt className="text-neutral-500">”­”„“ú</dt>
+                <dt className="text-neutral-500">ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</dt>
                 <dd className="text-neutral-200">{item.releaseDate.slice(0, 10)}</dd>
               </>
             )}
             {item.listPrice && (
               <>
-                <dt className="text-neutral-500">‰¿Ši</dt>
+                <dt className="text-neutral-500">ï¿½ï¿½ï¿½i</dt>
                 <dd className="text-neutral-200">{item.listPrice}</dd>
               </>
             )}
             {item.reviewAverage != null && (
               <>
-                <dt className="text-neutral-500">•]‰¿</dt>
+                <dt className="text-neutral-500">ï¿½]ï¿½ï¿½</dt>
                 <dd className="flex items-center gap-1.5">
-                  <span className="text-yellow-400">{"š".repeat(Math.round(item.reviewAverage))}</span>
+                  <span className="text-yellow-400">{"ï¿½ï¿½".repeat(Math.round(item.reviewAverage))}</span>
                   <span className="tabular-nums font-medium text-yellow-300">{item.reviewAverage.toFixed(1)}</span>
                   {item.reviewCount != null && (
-                    <span className="text-neutral-500">({item.reviewCount}Œ)</span>
+                    <span className="text-neutral-500">({item.reviewCount}ï¿½ï¿½)</span>
                   )}
                 </dd>
               </>
@@ -123,14 +123,14 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
 
       {item.sampleVideoUrl && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">ƒTƒ“ƒvƒ‹“®‰æ</h2>
+          <h2 className="text-lg font-semibold">ï¿½Tï¿½ï¿½ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</h2>
           <VideoPreview url={item.sampleVideoUrl} />
         </section>
       )}
 
       {item.sampleImages.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">ƒTƒ“ƒvƒ‹‰æ‘œ</h2>
+          <h2 className="text-lg font-semibold">ï¿½Tï¿½ï¿½ï¿½vï¿½ï¿½ï¿½æ‘œ</h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {item.sampleImages.map((url, index) => (
               <div key={`${url}-${index}`} className="relative aspect-video overflow-hidden rounded-lg border border-neutral-700">

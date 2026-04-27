@@ -16,7 +16,7 @@ type ItemCardProps = {
 function StarRating({ avg, count }: { avg: number; count?: number }) {
   return (
     <span className="inline-flex items-center gap-1 text-sm">
-      <span className="text-yellow-400">{"š".repeat(Math.round(avg))}</span>
+      <span className="text-yellow-400">{"ï¿½ï¿½".repeat(Math.round(avg))}</span>
       <span className="tabular-nums font-medium text-yellow-300">{avg.toFixed(1)}</span>
       {count != null && (
         <span className="text-neutral-500">({count})</span>
@@ -69,7 +69,7 @@ export function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
 
         {item.actressNames.length > 0 && (
           <p className="text-sm text-neutral-300">
-            {item.actressNames.join("A")}
+            {item.actressNames.join("ï¿½A")}
           </p>
         )}
 
@@ -100,7 +100,7 @@ export function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
             href={detailHref}
             className="rounded-lg border border-neutral-700 px-2.5 py-1.5 text-[11px] font-medium transition-colors hover:bg-neutral-800 sm:px-3 sm:text-xs"
           >
-            Ú×
+            ï¿½Úï¿½
           </Link>
           {item.sampleVideoUrl && (
             <Link
@@ -109,7 +109,7 @@ export function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
               rel="noopener noreferrer"
               className="rounded-lg border border-neutral-700 px-2.5 py-1.5 text-[11px] font-medium transition-colors hover:bg-neutral-800 sm:px-3 sm:text-xs"
             >
-              ƒTƒ“ƒvƒ‹“®‰æ
+              ï¿½Tï¿½ï¿½ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             </Link>
           )}
           <AffiliateButton
