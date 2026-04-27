@@ -33,7 +33,7 @@ function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void })
         </Link>
         {item.actressNames.length > 0 && (
           <p className="line-clamp-1 text-xs text-neutral-500">
-            {item.actressNames.join("A")}
+            {item.actressNames.join("ï¿½A")}
           </p>
         )}
       </div>
@@ -42,7 +42,7 @@ function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void })
           type="button"
           onClick={onRemove}
           className="shrink-0 rounded px-1.5 py-0.5 text-xs text-neutral-600 opacity-0 transition-opacity hover:text-neutral-300 group-hover:opacity-100"
-          title="íœ"
+          title="ï¿½íœ"
         >
           ?
         </button>
@@ -59,10 +59,10 @@ export function FavoritesSection() {
     <section className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">
-          <span className="mr-1.5 text-red-400">?</span>‚¨‹C‚É“ü‚è
+          <span className="mr-1.5 text-red-400">?</span>ï¿½ï¿½ï¿½Cï¿½É“ï¿½ï¿½ï¿½
           <span className="ml-1.5 text-xs text-neutral-500">({items.length})</span>
         </h2>
-        <span className="text-xs text-neutral-500">{isSynced ? "“¯Šú’†" : "‚±‚Ì’[––‚Ì‚İ"}</span>
+        <span className="text-xs text-neutral-500">{isSynced ? "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½" : "ï¿½ï¿½ï¿½Ì’[ï¿½ï¿½ï¿½Ì‚ï¿½"}</span>
       </div>
       <CollectionCapacityMeter capacity={capacity} />
       <div className="grid gap-2 md:grid-cols-2">
@@ -83,7 +83,7 @@ export function FavoritesSection() {
         ))}
       </div>
       {items.length > 10 && (
-        <p className="text-xs text-neutral-500">‘¼ {items.length - 10} Œ</p>
+        <p className="text-xs text-neutral-500">ï¿½ï¿½ {items.length - 10} ï¿½ï¿½</p>
       )}
     </section>
   );
@@ -96,7 +96,7 @@ export function HistorySection() {
   return (
     <section className="space-y-3">
       <h2 className="text-sm font-semibold">
-        <span className="mr-1.5 text-neutral-500">?</span>Å‹ßƒ`ƒFƒbƒN‚µ‚½ì•i
+        <span className="mr-1.5 text-neutral-500">?</span>ï¿½Å‹ßƒ`ï¿½Fï¿½bï¿½Nï¿½ï¿½ï¿½ï¿½ï¿½ï¿½i
       </h2>
       <div className="grid gap-2 md:grid-cols-2">
         {items.slice(0, 8).map((item) => (

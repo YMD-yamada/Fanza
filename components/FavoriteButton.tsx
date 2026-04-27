@@ -22,7 +22,7 @@ export function FavoriteButton({ id, title, imageUrl, actressNames, catalog, siz
     <button
       type="button"
       onClick={() => toggle(entry)}
-      title={active ? "‚¨‹C‚É“ü‚è‰ğœ" : "‚¨‹C‚É“ü‚è“o˜^"}
+      title={active ? "ï¿½ï¿½ï¿½Cï¿½É“ï¿½ï¿½ï¿½ï¿½ï¿½" : "ï¿½ï¿½ï¿½Cï¿½É“ï¿½ï¿½ï¿½oï¿½^"}
       className={`inline-flex items-center justify-center rounded-lg border transition-colors ${
         active
           ? "border-red-500/40 bg-red-500/15 text-red-400"
