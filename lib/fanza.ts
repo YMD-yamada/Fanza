@@ -66,11 +66,25 @@ function parsePriceLabel(prices: unknown): string | undefined {
   return typeof p === "string" ? `${p}円` : getString(p);
 }
 
+function parseImageUrl(rawImage: unknown): { packageImageUrl?: string; largeImageUrl?: string } {
+  const image = (rawImage as Record<string, unknown> | undefined) ?? {};
+  return {
+    // video: small, doujin/pcgame/ebook/mono: list
+    packageImageUrl: getString(image.small) ?? getString(image.list),
+    largeImageUrl: getString(image.large),
+  };
+}
+
 function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
   const itemInfo = (raw.iteminfo as Record<string, unknown> | undefined) ?? {};
   const sampleImagesRaw = (raw.sampleImageURL as Record<string, unknown> | undefined) ?? {};
   const sampleSRaw = sampleImagesRaw.sample_s;
-  const sampleList = Array.isArray(sampleSRaw) ? sampleSRaw : [];
+  const sampleLRaw = sampleImagesRaw.sample_l;
+  const sampleList = Array.isArray(sampleSRaw)
+    ? sampleSRaw
+    : Array.isArray(sampleLRaw)
+      ? sampleLRaw
+      : [];
 
   const actressInfo = (itemInfo.actress as unknown[] | undefined) ?? [];
   const genreInfo = (itemInfo.genre as unknown[] | undefined) ?? [];
@@ -83,6 +97,7 @@ function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
     getString(sampleMovie.size_644_414) ??
     getString(sampleMovie.size_560_360) ??
     getString(sampleMovie.size_476_306);
+  const { packageImageUrl, largeImageUrl } = parseImageUrl(raw.imageURL);
 
   return {
     id: getString(raw.content_id) ?? getString(raw.product_id) ?? crypto.randomUUID(),
@@ -91,8 +106,8 @@ function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
     description: getString(raw.comment),
     actressNames: getArray(actressInfo.map((x) => (x as { name?: string }).name)),
     genres: getArray(genreInfo.map((x) => (x as { name?: string }).name)),
-    packageImageUrl: getString((raw.imageURL as Record<string, unknown> | undefined)?.small),
-    largeImageUrl: getString((raw.imageURL as Record<string, unknown> | undefined)?.large),
+    packageImageUrl,
+    largeImageUrl,
     sampleVideoUrl,
     sampleImages: sampleList
       .map((entry) => getString((entry as Record<string, unknown>).image))

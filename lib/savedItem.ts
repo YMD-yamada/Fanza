@@ -38,9 +38,15 @@ function toSavedItem(value: unknown): SavedItem | null {
     : [];
 
   const catalog =
-    maybe.catalog === "video" || maybe.catalog === "doujin" || maybe.catalog === "game"
+    maybe.catalog === "books" ||
+    maybe.catalog === "pcgame" ||
+    maybe.catalog === "video" ||
+    maybe.catalog === "doujin" ||
+    maybe.catalog === "mono"
       ? maybe.catalog
-      : undefined;
+      : maybe.catalog === "game"
+        ? "pcgame"
+        : undefined;
 
   return {
     id: maybe.id,

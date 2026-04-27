@@ -5,12 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useMemo, useState } from "react";
 
 const sortOptions = [
-  { value: "rank", label: "�l�C" },
-  { value: "review", label: "���]��" },
-  { value: "-date", label: "�V��" },
-  { value: "date", label: "�Â���" },
-  { value: "price", label: "������" },
-  { value: "-price", label: "������" },
+  { value: "rank", label: "人気" },
+  { value: "review", label: "高評価" },
+  { value: "-date", label: "新着" },
+  { value: "date", label: "古い順" },
+  { value: "price", label: "安い順" },
+  { value: "-price", label: "高い順" },
 ] as const;
 
 function daysAgo(n: number): string {
@@ -20,40 +20,50 @@ function daysAgo(n: number): string {
 }
 
 const datePresets = [
-  { label: "���ׂ�", gte: "" },
-  { label: "1�T��", gte: () => daysAgo(7) },
-  { label: "1����", gte: () => daysAgo(30) },
-  { label: "3����", gte: () => daysAgo(90) },
-  { label: "���N", gte: () => daysAgo(180) },
-  { label: "1�N", gte: () => daysAgo(365) },
+  { label: "すべて", gte: "" },
+  { label: "1週間", gte: () => daysAgo(7) },
+  { label: "1ヶ月", gte: () => daysAgo(30) },
+  { label: "3ヶ月", gte: () => daysAgo(90) },
+  { label: "半年", gte: () => daysAgo(180) },
+  { label: "1年", gte: () => daysAgo(365) },
 ] as const;
 
 const pricePresets = [
-  { label: "���ׂ�", min: "", max: "" },
-  { label: "?500�~", min: "", max: "500" },
-  { label: "?1000�~", min: "", max: "1000" },
-  { label: "?2000�~", min: "", max: "2000" },
-  { label: "?3000�~", min: "", max: "3000" },
-  { label: "3000�~?", min: "3000", max: "" },
+  { label: "すべて", min: "", max: "" },
+  { label: "〜500円", min: "", max: "500" },
+  { label: "〜1000円", min: "", max: "1000" },
+  { label: "〜2000円", min: "", max: "2000" },
+  { label: "〜3000円", min: "", max: "3000" },
+  { label: "3000円〜", min: "3000", max: "" },
 ] as const;
 
 const videoQuickKeywordGroups = [
-  { label: "�̌^�E�o�X�g", keywords: ["����", "����", "����", "�n���E����", "�X�����_�[", "�ۂ������", "���g", "�~�j�n"] },
-  { label: "�^�C�v", keywords: ["�l��", "�n��", "�f�l", "���q�吶", "OL", "�M����", "���o����", "�����n", "�s��", "�����t"] },
-  { label: "�v���C�E�V�`���G�[�V����", keywords: ["���o��", "���", "�i���p", "3P�E4P", "������", "�C���}�`�I", "�Q���E�Q����", "�t�i���p", "�I�o"] },
-  { label: "�W�������E���̑�", keywords: ["���", "�R�X�v��", "VR", "4K", "�f�r���[��i", "�Ɛ�z�M", "�n�C�r�W����", "�A�C�h���E�|�\�l"] },
+  { label: "体型・バスト", keywords: ["巨乳", "美乳", "爆乳", "貧乳・微乳", "スレンダー", "ぽっちゃり", "長身", "ミニ系"] },
+  { label: "タイプ", keywords: ["人妻", "熟女", "素人", "女子大生", "OL", "ギャル", "お姉さん", "ロリ系", "痴女", "女教師"] },
+  { label: "プレイ・シチュエーション", keywords: ["中出し", "顔射", "ナンパ", "3P・4P", "潮吹き", "イラマチオ", "寝取り・寝取られ", "逆ナンパ", "露出"] },
+  { label: "ジャンル・その他", keywords: ["企画", "コスプレ", "VR", "4K", "デビュー作品", "独占配信", "ハイビジョン", "アイドル・芸能人"] },
 ] as const;
 
 const doujinQuickKeywordGroups = [
-  { label: "�`���E�}��", keywords: ["���l��", "���l�Q�[��", "CG�W", "�{�C�X", "ASMR", "�}���K"] },
-  { label: "�W������", keywords: ["RPG", "SLG", "�A�N�V����", "ADV", "�V�~�����[�V����", "�琬", "��������"] },
-  { label: "�e�[�}", keywords: ["�t�@���^�W�[", "�w��", "�Q���", "����", "�G��", "�I���W�i��", "�t���J���["] },
+  { label: "形式・媒体", keywords: ["同人誌", "同人ゲーム", "CG集", "ボイス", "ASMR", "マンガ"] },
+  { label: "ジャンル", keywords: ["RPG", "SLG", "アクション", "ADV", "シミュレーション", "育成", "乙女向け"] },
+  { label: "テーマ", keywords: ["ファンタジー", "学園", "寝取り", "制服", "触手", "オリジナル", "フルカラー"] },
 ] as const;
 
 const gameQuickKeywordGroups = [
-  { label: "�W������", keywords: ["RPG", "SLG", "�A�N�V����", "ADV", "FPS", "TCG", "�i��"] },
-  { label: "�v���C", keywords: ["�^�[����", "���A���^�C��", "Roguelike", "�����V�~��", "�琬�V��"] },
-  { label: "�e�[�}", keywords: ["�w��", "�ِ��E", "���l", "�t���{�C�X", "�̌��ł���"] },
+  { label: "ジャンル", keywords: ["RPG", "SLG", "アクション", "ADV", "FPS", "TCG", "格闘"] },
+  { label: "プレイ", keywords: ["ターン制", "リアルタイム", "Roguelike", "恋愛シミュ", "育成シム"] },
+  { label: "テーマ", keywords: ["学園", "異世界", "同人", "フルボイス", "体験版あり"] },
+] as const;
+
+const booksQuickKeywordGroups = [
+  { label: "ジャンル", keywords: ["コミック", "単行本", "雑誌", "小説", "写真集"] },
+  { label: "テーマ", keywords: ["ラブコメ", "学園", "人妻", "巨乳", "年上", "日常"] },
+] as const;
+
+const monoQuickKeywordGroups = [
+  { label: "カテゴリ", keywords: ["DVD", "Blu-ray", "グッズ", "アニメ", "PCゲーム"] },
+  { label: "探し方", keywords: ["新作", "予約", "限定", "特典", "セット"] },
 ] as const;
 
 function resolveGte(preset: (typeof datePresets)[number]): string {
@@ -78,7 +88,9 @@ function matchPricePreset(pMin: string, pMax: string): number {
 function parseSelectedChips(q: string, groups: readonly { keywords: readonly string[] }[]): Set<string> {
   const all = groups.flatMap((g) => g.keywords);
   const set = new Set<string>();
-  for (const kw of all) if (q.includes(kw)) set.add(kw);
+  for (const kw of all) {
+    if (q.includes(kw)) set.add(kw);
+  }
   return set;
 }
 
@@ -101,12 +113,18 @@ function PillRow({ label, options, activeIdx, color = "sky", onPick }: {
     emerald: "bg-emerald-600 text-white",
     amber: "bg-amber-600 text-white",
   };
+
   return (
     <div className="space-y-1.5">
       <span className="text-[11px] font-medium tracking-wide text-neutral-500">{label}</span>
       <div className="flex flex-wrap gap-1.5">
         {options.map((o, i) => (
-          <button key={o.label} type="button" onClick={() => onPick(i)} className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${activeIdx === i ? colors[color] : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"}`}>
+          <button
+            key={o.label}
+            type="button"
+            onClick={() => onPick(i)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${activeIdx === i ? colors[color] : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"}`}
+          >
             {o.label}
           </button>
         ))}
@@ -123,9 +141,13 @@ export function SearchBar() {
 
   const quickKeywordGroups = catalogSpec.id === "doujin"
     ? doujinQuickKeywordGroups
-    : catalogSpec.id === "game"
+    : catalogSpec.id === "pcgame"
       ? gameQuickKeywordGroups
-      : videoQuickKeywordGroups;
+      : catalogSpec.id === "books"
+        ? booksQuickKeywordGroups
+        : catalogSpec.id === "mono"
+          ? monoQuickKeywordGroups
+          : videoQuickKeywordGroups;
 
   const initialQ = sp.get("q") ?? "";
 
@@ -147,10 +169,14 @@ export function SearchBar() {
   const currentQuery = useMemo(() => buildQuery(selectedChips, freeText), [selectedChips, freeText]);
 
   const placeholder = catalogSpec.id === "doujin"
-    ? "�^�C�g���E�T�[�N�����ȂǂŌ���"
-    : catalogSpec.id === "game"
-      ? "�^�C�g���E���[�J�[���ȂǂŌ���"
-      : "��i���E���D���Ō���";
+    ? "タイトル・サークル名などで検索"
+    : catalogSpec.id === "pcgame"
+      ? "タイトル・メーカー名などで検索"
+      : catalogSpec.id === "books"
+        ? "作品名・作者名などで検索"
+        : catalogSpec.id === "mono"
+          ? "商品名・型番などで検索"
+          : "作品名・女優名で検索";
 
   const navigate = useCallback((overrides: { q?: string; sort?: string; gte?: string; pMin?: string; pMax?: string; video?: boolean; }) => {
     const q = (overrides.q ?? currentQuery).trim();
@@ -158,6 +184,7 @@ export function SearchBar() {
       router.push(catalogSpec.id === "video" ? "/" : `/?cat=${catalogSpec.id}`);
       return;
     }
+
     const s = overrides.sort ?? sort;
     const g = overrides.gte ?? gteDate;
     const pmn = overrides.pMin ?? priceMin;
@@ -175,15 +202,42 @@ export function SearchBar() {
     router.push(`/?${params.toString()}`);
   }, [catalogSpec.id, currentQuery, sort, gteDate, priceMin, priceMax, hasVideo, router]);
 
-  const onSubmit = (event: FormEvent) => { event.preventDefault(); navigate({}); };
-  const pickSort = (idx: number) => { const value = sortOptions[idx].value; setSort(value); if (currentQuery.trim()) navigate({ sort: value }); };
-  const pickDate = (idx: number) => { const gte = resolveGte(datePresets[idx]); setGteDate(gte); setActiveDateIdx(idx); if (currentQuery.trim()) navigate({ gte }); };
-  const pickPrice = (idx: number) => { const p = pricePresets[idx]; setPriceMin(p.min); setPriceMax(p.max); setActivePriceIdx(idx); if (currentQuery.trim()) navigate({ pMin: p.min, pMax: p.max }); };
-  const toggleVideo = () => { const next = !hasVideo; setHasVideo(next); if (currentQuery.trim()) navigate({ video: next }); };
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    navigate({});
+  };
+
+  const pickSort = (idx: number) => {
+    const value = sortOptions[idx].value;
+    setSort(value);
+    if (currentQuery.trim()) navigate({ sort: value });
+  };
+
+  const pickDate = (idx: number) => {
+    const gte = resolveGte(datePresets[idx]);
+    setGteDate(gte);
+    setActiveDateIdx(idx);
+    if (currentQuery.trim()) navigate({ gte });
+  };
+
+  const pickPrice = (idx: number) => {
+    const p = pricePresets[idx];
+    setPriceMin(p.min);
+    setPriceMax(p.max);
+    setActivePriceIdx(idx);
+    if (currentQuery.trim()) navigate({ pMin: p.min, pMax: p.max });
+  };
+
+  const toggleVideo = () => {
+    const next = !hasVideo;
+    setHasVideo(next);
+    if (currentQuery.trim()) navigate({ video: next });
+  };
 
   const toggleChip = (kw: string) => {
     const next = new Set(selectedChips);
-    if (next.has(kw)) next.delete(kw); else next.add(kw);
+    if (next.has(kw)) next.delete(kw);
+    else next.add(kw);
     setSelectedChips(next);
     navigate({ q: buildQuery(next, freeText) });
   };
@@ -193,26 +247,31 @@ export function SearchBar() {
   return (
     <div className="space-y-4">
       <form onSubmit={onSubmit} className="flex flex-col gap-2 sm:flex-row">
-        <input value={freeText} onChange={(e) => setFreeText(e.target.value)} placeholder={placeholder} className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm outline-none transition-colors placeholder:text-neutral-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30" />
-        <button type="submit" className="rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-500 active:bg-sky-700 sm:w-auto">����</button>
+        <input
+          value={freeText}
+          onChange={(e) => setFreeText(e.target.value)}
+          placeholder={placeholder}
+          className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm outline-none transition-colors placeholder:text-neutral-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
+        />
+        <button type="submit" className="rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-500 active:bg-sky-700 sm:w-auto">検索</button>
       </form>
 
-      <PillRow label="���ёւ�" options={sortOptions} activeIdx={sortIdx} color="sky" onPick={pickSort} />
-      <PillRow label="���J����" options={datePresets} activeIdx={activeDateIdx} color="violet" onPick={pickDate} />
-      <PillRow label="���i��" options={pricePresets} activeIdx={activePriceIdx} color="emerald" onPick={pickPrice} />
+      <PillRow label="並び替え" options={sortOptions} activeIdx={sortIdx} color="sky" onPick={pickSort} />
+      <PillRow label="公開時期" options={datePresets} activeIdx={activeDateIdx} color="violet" onPick={pickDate} />
+      <PillRow label="価格帯" options={pricePresets} activeIdx={activePriceIdx} color="emerald" onPick={pickPrice} />
 
       {catalogSpec.supportsSampleVideo && (
         <div className="space-y-1.5">
-          <span className="text-[11px] font-medium tracking-wide text-neutral-500">�T���v������</span>
+          <span className="text-[11px] font-medium tracking-wide text-neutral-500">サンプル動画</span>
           <div className="flex gap-1.5">
-            <button type="button" onClick={() => { if (hasVideo) toggleVideo(); }} className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${!hasVideo ? "bg-amber-600 text-white" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"}`}>���ׂ�</button>
-            <button type="button" onClick={() => { if (!hasVideo) toggleVideo(); }} className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${hasVideo ? "bg-amber-600 text-white" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"}`}>���悠��̂�</button>
+            <button type="button" onClick={() => { if (hasVideo) toggleVideo(); }} className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${!hasVideo ? "bg-amber-600 text-white" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"}`}>すべて</button>
+            <button type="button" onClick={() => { if (!hasVideo) toggleVideo(); }} className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${hasVideo ? "bg-amber-600 text-white" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"}`}>動画ありのみ</button>
           </div>
         </div>
       )}
 
       <div className="space-y-3">
-        <span className="text-[11px] font-medium tracking-wide text-neutral-500">�N�C�b�N�����i�����I��j</span>
+        <span className="text-[11px] font-medium tracking-wide text-neutral-500">クイック検索（複数選択可）</span>
         {quickKeywordGroups.map((group) => (
           <div key={group.label} className="space-y-1">
             <span className="text-[10px] text-neutral-600">{group.label}</span>
