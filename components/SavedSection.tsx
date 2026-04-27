@@ -2,16 +2,19 @@
 
 import Link from "next/link";
 
-import { SafeThumbnail } from "@/components/SafeMedia";
-import { useFavorites, useHistory } from "@/lib/useStorage";
-import type { SavedItem } from "@/lib/savedItem";
 import { CollectionCapacityMeter } from "@/components/CollectionCapacity";
+import { SafeThumbnail } from "@/components/SafeMedia";
+import { itemDetailPath } from "@/lib/item-link";
+import type { SavedItem } from "@/lib/savedItem";
+import { useFavorites, useHistory } from "@/lib/useStorage";
 
 function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void }) {
+  const href = itemDetailPath(item.id, item.catalog);
+
   return (
     <div className="group flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-900/60 p-2 transition-colors hover:border-neutral-700">
       <Link
-        href={`/items/${encodeURIComponent(item.id)}`}
+        href={href}
         className="relative h-16 w-11 shrink-0 overflow-hidden rounded border border-neutral-700"
       >
         <SafeThumbnail
@@ -23,14 +26,14 @@ function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void })
       </Link>
       <div className="min-w-0 flex-1">
         <Link
-          href={`/items/${encodeURIComponent(item.id)}`}
+          href={href}
           className="line-clamp-1 text-sm font-medium hover:text-sky-400"
         >
           {item.title}
         </Link>
         {item.actressNames.length > 0 && (
           <p className="line-clamp-1 text-xs text-neutral-500">
-            {item.actressNames.join("ã€")}
+            {item.actressNames.join("A")}
           </p>
         )}
       </div>
@@ -39,9 +42,9 @@ function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void })
           type="button"
           onClick={onRemove}
           className="shrink-0 rounded px-1.5 py-0.5 text-xs text-neutral-600 opacity-0 transition-opacity hover:text-neutral-300 group-hover:opacity-100"
-          title="å‰Šé™¤"
+          title="íœ"
         >
-          âœ•
+          ?
         </button>
       )}
     </div>
@@ -56,10 +59,10 @@ export function FavoritesSection() {
     <section className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">
-          <span className="mr-1.5 text-red-400">â™¥</span>ãŠæ°—ã«å…¥ã‚Š
+          <span className="mr-1.5 text-red-400">?</span>‚¨‹C‚É“ü‚è
           <span className="ml-1.5 text-xs text-neutral-500">({items.length})</span>
         </h2>
-        <span className="text-xs text-neutral-500">{isSynced ? "åŒæœŸä¸­" : "ã“ã®ç«¯æœ«ã®ã¿"}</span>
+        <span className="text-xs text-neutral-500">{isSynced ? "“¯Šú’†" : "‚±‚Ì’[––‚Ì‚İ"}</span>
       </div>
       <CollectionCapacityMeter capacity={capacity} />
       <div className="grid gap-2 md:grid-cols-2">
@@ -68,13 +71,19 @@ export function FavoritesSection() {
             key={item.id}
             item={item}
             onRemove={() =>
-              toggle({ id: item.id, title: item.title, imageUrl: item.imageUrl, actressNames: item.actressNames })
+              toggle({
+                id: item.id,
+                title: item.title,
+                imageUrl: item.imageUrl,
+                actressNames: item.actressNames,
+                catalog: item.catalog,
+              })
             }
           />
         ))}
       </div>
       {items.length > 10 && (
-        <p className="text-xs text-neutral-500">ä»– {items.length - 10} ä»¶</p>
+        <p className="text-xs text-neutral-500">‘¼ {items.length - 10} Œ</p>
       )}
     </section>
   );
@@ -87,7 +96,7 @@ export function HistorySection() {
   return (
     <section className="space-y-3">
       <h2 className="text-sm font-semibold">
-        <span className="mr-1.5 text-neutral-500">â—·</span>æœ€è¿‘ãƒã‚§ãƒƒã‚¯ã—ãŸä½œå“
+        <span className="mr-1.5 text-neutral-500">?</span>Å‹ßƒ`ƒFƒbƒN‚µ‚½ì•i
       </h2>
       <div className="grid gap-2 md:grid-cols-2">
         {items.slice(0, 8).map((item) => (

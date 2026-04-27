@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import type { CatalogId } from "@/lib/catalogs";
+import { itemDetailPath } from "@/lib/item-link";
 import type { NormalizedItem } from "@/lib/types";
 import { AffiliateButton } from "@/components/AffiliateButton";
 import { FavoriteButton } from "@/components/FavoriteButton";
@@ -7,13 +9,14 @@ import { ItemCardThumbnail } from "@/components/ItemCardThumbnail";
 
 type ItemCardProps = {
   item: NormalizedItem;
+  catalog?: CatalogId;
   returnTo?: string;
 };
 
 function StarRating({ avg, count }: { avg: number; count?: number }) {
   return (
     <span className="inline-flex items-center gap-1 text-sm">
-      <span className="text-yellow-400">{"â˜…".repeat(Math.round(avg))}</span>
+      <span className="text-yellow-400">{"š".repeat(Math.round(avg))}</span>
       <span className="tabular-nums font-medium text-yellow-300">{avg.toFixed(1)}</span>
       {count != null && (
         <span className="text-neutral-500">({count})</span>
@@ -22,8 +25,8 @@ function StarRating({ avg, count }: { avg: number; count?: number }) {
   );
 }
 
-export function ItemCard({ item, returnTo }: ItemCardProps) {
-  const detailPath = `/items/${encodeURIComponent(item.id)}`;
+export function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
+  const detailPath = itemDetailPath(item.id, catalog);
   const detailHref = returnTo
     ? {
         pathname: detailPath,
@@ -60,12 +63,13 @@ export function ItemCard({ item, returnTo }: ItemCardProps) {
             title={item.title}
             imageUrl={item.packageImageUrl}
             actressNames={item.actressNames}
+            catalog={catalog}
           />
         </div>
 
         {item.actressNames.length > 0 && (
           <p className="text-sm text-neutral-300">
-            {item.actressNames.join("ã€")}
+            {item.actressNames.join("A")}
           </p>
         )}
 
@@ -96,7 +100,7 @@ export function ItemCard({ item, returnTo }: ItemCardProps) {
             href={detailHref}
             className="rounded-lg border border-neutral-700 px-2.5 py-1.5 text-[11px] font-medium transition-colors hover:bg-neutral-800 sm:px-3 sm:text-xs"
           >
-            è©³ç´°
+            Ú×
           </Link>
           {item.sampleVideoUrl && (
             <Link
@@ -105,7 +109,7 @@ export function ItemCard({ item, returnTo }: ItemCardProps) {
               rel="noopener noreferrer"
               className="rounded-lg border border-neutral-700 px-2.5 py-1.5 text-[11px] font-medium transition-colors hover:bg-neutral-800 sm:px-3 sm:text-xs"
             >
-              ã‚µãƒ³ãƒ—ãƒ«å‹•ç”»
+              ƒTƒ“ƒvƒ‹“®‰æ
             </Link>
           )}
           <AffiliateButton

@@ -1,8 +1,11 @@
+import type { CatalogId } from "@/lib/catalogs";
+
 export type SavedItemInput = {
   id: string;
   title: string;
   imageUrl?: string;
   actressNames: string[];
+  catalog?: CatalogId;
 };
 
 export type SavedItem = SavedItemInput & {
@@ -34,6 +37,11 @@ function toSavedItem(value: unknown): SavedItem | null {
         .slice(0, 20)
     : [];
 
+  const catalog =
+    maybe.catalog === "video" || maybe.catalog === "doujin" || maybe.catalog === "game"
+      ? maybe.catalog
+      : undefined;
+
   return {
     id: maybe.id,
     title: maybe.title,
@@ -42,6 +50,7 @@ function toSavedItem(value: unknown): SavedItem | null {
         ? maybe.imageUrl
         : undefined,
     actressNames,
+    catalog,
     savedAt: Number.isFinite(maybe.savedAt) ? Number(maybe.savedAt) : Date.now(),
   };
 }

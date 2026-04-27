@@ -1,5 +1,6 @@
 "use client";
 
+import type { CatalogId } from "@/lib/catalogs";
 import { useEffect } from "react";
 import { useHistory } from "@/lib/useStorage";
 
@@ -8,6 +9,7 @@ type Props = {
   title: string;
   imageUrl?: string;
   actressNames: string[];
+  catalog?: CatalogId;
 };
 
 export function RecordHistory(props: Props) {

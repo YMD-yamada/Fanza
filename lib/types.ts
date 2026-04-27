@@ -1,8 +1,12 @@
+import type { CatalogId } from "@/lib/catalogs";
+
 export type ArticleType = "actress" | "author" | "genre" | "maker" | "series" | "label";
 
 export type SearchFilters = {
   keyword: string;
   page: number;
+  /** ItemList のフロア（省略時は動画） */
+  catalog?: CatalogId;
   sort?: string;
   gteDate?: string;
   lteDate?: string;
