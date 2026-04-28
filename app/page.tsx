@@ -53,7 +53,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const badges: { label: string; cls: string }[] = [];
   if (gteDate) badges.push({ label: `${gteDate.slice(0, 10)}??`, cls: "bg-violet-500/15 text-violet-300" });
   if (pMin > 0 || pMax > 0) {
-    const label = pMin > 0 && pMax > 0 ? `${pMin}?${pMax}?` : pMax > 0 ?  `?${pMax}?` : `${pMin}??`;
+    const label = pMin > 0 && pMax > 0 ? `${pMin}?${pMax}?` : pMax > 0 ? `?${pMax}?` : `${pMin}??`;
     badges.push({ label, cls: "bg-emerald-500/15 text-emerald-300" });
   }
   if (hasVideo) badges.push({ label: "????????", cls: "bg-amber-500/15 text-amber-300" });
