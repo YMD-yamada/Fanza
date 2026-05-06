@@ -4,6 +4,15 @@ import { FavoritesSection, HistorySection } from "@/components/SavedSection";
 import { SearchBar } from "@/components/SearchBar";
 import { SearchResultsInfinite } from "@/components/SearchResultsInfinite";
 import { getCatalog } from "@/lib/catalogs";
+import {
+  BADGE_HAS_SAMPLE_VIDEO_LABEL,
+  HOME_EMPTY_PROMPT,
+  HOME_HEADING_DESCRIPTION,
+  HOME_HEADING_TITLE,
+  HOME_NO_RESULTS_MESSAGE,
+  badgePriceRangeJa,
+  badgeReleaseDateJa,
+} from "@/lib/home-copy";
 import { filterNormalizedItems } from "@/lib/item-filters";
 import { searchFanza } from "@/lib/fanza";
 
@@ -51,12 +60,11 @@ export default async function Home({ searchParams }: HomeProps) {
   const filteredItems = raw != null ? filterNormalizedItems(raw.items, clientFilters) : [];
 
   const badges: { label: string; cls: string }[] = [];
-  if (gteDate) badges.push({ label: `${gteDate.slice(0, 10)}??`, cls: "bg-violet-500/15 text-violet-300" });
+  if (gteDate) badges.push({ label: badgeReleaseDateJa(gteDate.slice(0, 10)), cls: "bg-violet-500/15 text-violet-300" });
   if (pMin > 0 || pMax > 0) {
-    const label = pMin > 0 && pMax > 0 ? `${pMin}?${pMax}?` : pMax > 0 ? `?${pMax}?` : `${pMin}??`;
-    badges.push({ label, cls: "bg-emerald-500/15 text-emerald-300" });
+    badges.push({ label: badgePriceRangeJa(pMin, pMax), cls: "bg-emerald-500/15 text-emerald-300" });
   }
-  if (hasVideo) badges.push({ label: "????????", cls: "bg-amber-500/15 text-amber-300" });
+  if (hasVideo) badges.push({ label: BADGE_HAS_SAMPLE_VIDEO_LABEL, cls: "bg-amber-500/15 text-amber-300" });
 
   const tabParams = {
     q,
@@ -72,8 +80,8 @@ export default async function Home({ searchParams }: HomeProps) {
   return (
     <div className="space-y-6">
       <section className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Fanza ????</h1>
-        <p className="text-sm text-neutral-400">?????????????????1??????????</p>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{HOME_HEADING_TITLE}</h1>
+        <p className="text-sm text-neutral-400">{HOME_HEADING_DESCRIPTION}</p>
         {debug && (
           <p className="text-xs text-neutral-600">build: {buildVersion}</p>
         )}
@@ -88,7 +96,7 @@ export default async function Home({ searchParams }: HomeProps) {
           <FavoritesSection />
           <HistorySection />
           <section className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-5 py-8 text-center text-sm text-neutral-400">
-            ???????????????????????
+            {HOME_EMPTY_PROMPT}
           </section>
         </>
       )}
@@ -105,7 +113,7 @@ export default async function Home({ searchParams }: HomeProps) {
 
           {filteredItems.length === 0 && !raw.hasNext ? (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-5 py-8 text-center text-sm text-neutral-400">
-              ?????????????????????
+              {HOME_NO_RESULTS_MESSAGE}
             </div>
           ) : (
             <SearchResultsInfinite
