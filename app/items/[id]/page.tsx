@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -13,6 +14,47 @@ type ItemDetailProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ cat?: string; returnTo?: string }>;
 };
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: ItemDetailProps): Promise<Metadata> {
+  const { id } = await params;
+  const detailParams = await searchParams;
+  const catalog = getCatalog(detailParams.cat).id;
+  const item = await getFanzaItemById(id, catalog);
+
+  if (!item) {
+    return {
+      title: "作品情報",
+      description: "作品情報を取得できませんでした。",
+    };
+  }
+
+  const description =
+    item.description?.slice(0, 120) ??
+    `${item.title} の作品情報ページです。出演者・ジャンル・価格・サンプル情報を確認できます。`;
+  const image = item.largeImageUrl ?? item.packageImageUrl ?? undefined;
+  const path = catalog === "video" ? `/items/${item.id}` : `/items/${item.id}?cat=${catalog}`;
+
+  return {
+    title: item.title,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      title: item.title,
+      description,
+      type: "article",
+      images: image ? [{ url: image }] : undefined,
+    },
+    twitter: {
+      card: image ? "summary_large_image" : "summary",
+      title: item.title,
+      description,
+      images: image ? [image] : undefined,
+    },
+  };
+}
 
 export default async function ItemDetailPage({ params, searchParams }: ItemDetailProps) {
   const { id } = await params;
