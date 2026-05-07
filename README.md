@@ -23,6 +23,15 @@ cp .env.example .env.local
 - `DMM_API_ID`
 - `DMM_AFFILIATE_ID`
 
+任意（複数API統合検索）:
+- `R18_PARTNER_API_BASE_URL`
+- `R18_PARTNER_API_KEY`
+- `R18_PARTNER_API_KEY_HEADER`
+- `R18_PARTNER_AFFILIATE_FALLBACK_URL`
+- `MULTI_SEARCH_MODE` (`auto` / `unified` / `source_tabs`)
+- `PROVIDER_TIMEOUT_MS`
+- `MULTI_FALLBACK_SLOW_MS`
+
 **GitHub 公開時:** `.env.local` は秘密を含むためリポジトリに含めません（`.gitignore` で除外）。`git add -f .env.local` のような強制追加はしないでください。テンプレは `.env.example` のみコミットします。
 
 3. 開発サーバー起動
@@ -36,16 +45,34 @@ npm run dev
 ## 主な機能
 
 - キーワード検索、並び替え、ページング
+- 複数プロバイダ統合検索（FANZA + 任意のR18パートナーAPI）
 - 一覧カードで作品情報と購入導線を表示
 - 詳細ページでパッケージ画像・サンプル動画・サンプル画像を表示
 - 購入リンクにアフィリエイトIDを自動付与
 - クリック計測用のAPIエンドポイントを提供
+
+## 複数API統合検索
+
+`R18_PARTNER_API_BASE_URL` を設定すると、FANZAに加えて第2プロバイダを統合検索します。
+
+- 検索: `GET {base}/search?q=...&page=...&sort=...`
+- 詳細: `GET {base}/items/{id}`
+- 返却項目は本アプリの `NormalizedItem` に正規化可能な形式が必要です
+
+`MULTI_SEARCH_MODE=auto` の場合:
+- 通常は統合リスト表示
+- 一部provider失敗・遅延時は提供元別表示へフォールバック
 
 ## 公開時の注意
 
 - API利用規約およびアフィリエイト規約を確認してください
 - 年齢制限や免責を明示するページを公開してください
 - 本番では計測基盤（GA4/Plausible等）への接続を推奨します
+- 複数API導入時は、各APIごとに以下を必ず確認してください:
+  - 商用利用可否
+  - アフィリエイト表記義務
+  - 画像・サムネイル利用条件
+  - キャッシュ可否と保存期間
 
 ## 本番デプロイ（準備済みの選択肢）
 

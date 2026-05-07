@@ -1,6 +1,7 @@
 "use client";
 
 import type { CatalogId } from "@/lib/catalogs";
+import type { SourceId } from "@/lib/types";
 import { useFavorites } from "@/lib/useStorage";
 import type { SavedItemInput } from "@/lib/savedItem";
 
@@ -10,13 +11,14 @@ type Props = {
   imageUrl?: string;
   actressNames: string[];
   catalog?: CatalogId;
+  source?: SourceId;
   size?: "sm" | "md";
 };
 
-export function FavoriteButton({ id, title, imageUrl, actressNames, catalog, size = "sm" }: Props) {
+export function FavoriteButton({ id, title, imageUrl, actressNames, catalog, source, size = "sm" }: Props) {
   const { isFav, toggle } = useFavorites();
-  const active = isFav(id);
-  const entry: SavedItemInput = { id, title, imageUrl, actressNames, catalog };
+  const active = isFav(id, source);
+  const entry: SavedItemInput = { id, title, imageUrl, actressNames, catalog, source };
 
   return (
     <button

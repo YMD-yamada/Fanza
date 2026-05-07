@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getCatalog } from "@/lib/catalogs";
-import { searchFanza } from "@/lib/fanza";
-import type { ArticleType } from "@/lib/types";
+import { aggregateSearch } from "@/lib/search-aggregate";
+import { isSourceId, type ArticleType } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
   const article = (searchParams.get("article") ?? "") as ArticleType | "";
   const articleId = searchParams.get("article_id") ?? "";
   const catalog = getCatalog(searchParams.get("cat")).id;
+  const source = searchParams.get("source");
 
   if (!keyword.trim()) {
     return NextResponse.json(
@@ -23,10 +24,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await searchFanza({
+    const data = await aggregateSearch({
       keyword,
       page: Number.isNaN(page) || page < 1 ? 1 : page,
       catalog,
+      ...(isSourceId(source) ? { source } : {}),
       sort,
       ...(gteDate ? { gteDate } : {}),
       ...(lteDate ? { lteDate } : {}),

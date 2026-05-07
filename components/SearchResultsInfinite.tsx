@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { CatalogId } from "@/lib/catalogs";
 import { filterNormalizedItems } from "@/lib/item-filters";
-import type { NormalizedItem } from "@/lib/types";
+import type { NormalizedItem, SearchMode, SearchWarning, SourceId } from "@/lib/types";
 
 import { ItemCard } from "@/components/ItemCard";
 
@@ -13,6 +13,8 @@ type SearchApiPayload = {
   totalCount: number;
   page: number;
   hasNext: boolean;
+  mode?: SearchMode;
+  warnings?: SearchWarning[];
 };
 
 type Props = {
@@ -26,6 +28,8 @@ type Props = {
   initialItems: NormalizedItem[];
   totalCount: number;
   hasNext: boolean;
+  mode?: SearchMode;
+  warnings?: SearchWarning[];
 };
 
 export function SearchResultsInfinite({
@@ -39,12 +43,17 @@ export function SearchResultsInfinite({
   initialItems,
   totalCount,
   hasNext,
+  mode,
+  warnings,
 }: Props) {
   const [items, setItems] = useState(initialItems);
   const [loading, setLoading] = useState(false);
   const [apiHasNext, setApiHasNext] = useState(hasNext);
   const [lastApiPage, setLastApiPage] = useState(1);
-  const seenIds = useRef(new Set(initialItems.map((i) => i.id)));
+  const [activeSource, setActiveSource] = useState<SourceId | "all">("all");
+  const [responseMode, setResponseMode] = useState<SearchMode>(mode ?? "unified");
+  const [apiWarnings, setApiWarnings] = useState<SearchWarning[]>(warnings ?? []);
+  const seenIds = useRef(new Set(initialItems.map((i) => `${i.source}:${i.id}`)));
   const busy = useRef(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -59,6 +68,7 @@ export function SearchResultsInfinite({
       p.set("page", String(nextPage));
       p.set("sort", sort);
       p.set("cat", catalog);
+      if (activeSource !== "all") p.set("source", activeSource);
       if (gteDate) p.set("gte_date", gteDate);
 
       const res = await fetch(`/api/search?${p.toString()}`);
@@ -74,14 +84,17 @@ export function SearchResultsInfinite({
       setItems((prev) => {
         const out = [...prev];
         for (const item of filtered) {
-          if (seenIds.current.has(item.id)) continue;
-          seenIds.current.add(item.id);
+          const key = `${item.source}:${item.id}`;
+          if (seenIds.current.has(key)) continue;
+          seenIds.current.add(key);
           out.push(item);
         }
         return out;
       });
       setLastApiPage(data.page);
       setApiHasNext(data.hasNext);
+      setResponseMode(data.mode ?? "unified");
+      setApiWarnings(data.warnings ?? []);
     } finally {
       busy.current = false;
       setLoading(false);
@@ -93,6 +106,7 @@ export function SearchResultsInfinite({
     query,
     sort,
     gteDate,
+    activeSource,
     priceMin,
     priceMax,
     hasVideo,
@@ -113,8 +127,22 @@ export function SearchResultsInfinite({
     return () => observer.disconnect();
   }, [loadMore]);
 
+  const sourceCounts = items.reduce<Record<string, number>>((acc, item) => {
+    acc[item.source] = (acc[item.source] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const displayItems = activeSource === "all"
+    ? items
+    : items.filter((item) => item.source === activeSource);
+
   return (
     <>
+      {apiWarnings.length > 0 && (
+        <div className="rounded-lg border border-amber-700/40 bg-amber-900/20 px-3 py-2 text-xs text-amber-200">
+          一部の提供元で取得に失敗しました: {apiWarnings.map((w) => `${w.source}(${w.message})`).join(" / ")}
+        </div>
+      )}
       <div className="flex flex-wrap items-baseline gap-2 text-sm">
         <span className="tabular-nums font-semibold text-white">
           {totalCount.toLocaleString()}
@@ -131,11 +159,39 @@ export function SearchResultsInfinite({
         <span className="text-xs text-neutral-600">
           （下端までスクロールで続きを読み込み）
         </span>
+        {responseMode === "source_tabs" && (
+          <span className="text-xs text-amber-300">（速度優先モード: 提供元切替）</span>
+        )}
       </div>
+      {responseMode === "source_tabs" && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveSource("all")}
+            className={`rounded-full px-3 py-1 text-xs ${
+              activeSource === "all" ? "bg-sky-600 text-white" : "bg-neutral-800 text-neutral-300"
+            }`}
+          >
+            すべて ({items.length})
+          </button>
+          {Object.entries(sourceCounts).map(([source, count]) => (
+            <button
+              key={source}
+              type="button"
+              onClick={() => setActiveSource(source as SourceId)}
+              className={`rounded-full px-3 py-1 text-xs ${
+                activeSource === source ? "bg-sky-600 text-white" : "bg-neutral-800 text-neutral-300"
+              }`}
+            >
+              {source.toUpperCase()} ({count})
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-4">
-        {items.map((item) => (
-          <ItemCard key={item.id} item={item} catalog={catalog} />
+        {displayItems.map((item) => (
+          <ItemCard key={`${item.source}:${item.id}`} item={item} catalog={catalog} />
         ))}
       </div>
 

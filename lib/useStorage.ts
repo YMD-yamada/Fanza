@@ -122,9 +122,10 @@ export function useAuthState() {
 }
 
 function upsertFavorite(base: SavedItem[], entry: SavedItemInput): SavedItem[] {
-  const exists = base.some((item) => item.id === entry.id);
+  const key = `${entry.source ?? "fanza"}:${entry.id}`;
+  const exists = base.some((item) => `${item.source ?? "fanza"}:${item.id}` === key);
   const next = exists
-    ? base.filter((item) => item.id !== entry.id)
+    ? base.filter((item) => `${item.source ?? "fanza"}:${item.id}` !== key)
     : [{ ...entry, savedAt: Date.now() }, ...base];
   return sanitizeSavedItems(next, FAVORITES_LIMIT);
 }
@@ -208,7 +209,13 @@ export function useFavorites() {
     return localItems;
   }, [localItems, remoteItems, remoteLoaded, status, user]);
 
-  const isFav = useCallback((id: string) => items.some((item) => item.id === id), [items]);
+  const isFav = useCallback(
+    (id: string, source?: SavedItemInput["source"]) => {
+      const key = `${source ?? "fanza"}:${id}`;
+      return items.some((item) => `${item.source ?? "fanza"}:${item.id}` === key);
+    },
+    [items],
+  );
 
   const saveRemote = useCallback(
     async (favorites: SavedItem[]) => {
@@ -265,7 +272,10 @@ export function useHistory() {
   const items = useStore(HISTORY_KEY);
 
   const record = useCallback((entry: SavedItemInput) => {
-    const current = readStore(HISTORY_KEY).filter((item) => item.id !== entry.id);
+    const key = `${entry.source ?? "fanza"}:${entry.id}`;
+    const current = readStore(HISTORY_KEY).filter(
+      (item) => `${item.source ?? "fanza"}:${item.id}` !== key,
+    );
     const next = sanitizeSavedItems([{ ...entry, savedAt: Date.now() }, ...current], MAX_HISTORY);
     writeStore(HISTORY_KEY, next);
   }, []);

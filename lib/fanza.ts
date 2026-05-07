@@ -101,6 +101,8 @@ function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
 
   return {
     id: getString(raw.content_id) ?? getString(raw.product_id) ?? crypto.randomUUID(),
+    source: "fanza",
+    sourceLabel: "FANZA",
     title: getString(raw.title) ?? "タイトル不明",
     titleKana: getString(raw.title_kana),
     description: getString(raw.comment),
@@ -120,6 +122,7 @@ function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
     reviewCount: parseReviewCount(raw.review),
     productUrl: getString(raw.URL),
     affiliateUrl: affiliateUrl || "#",
+    score: parseReviewAverage(raw.review) ?? 0,
   };
 }
 

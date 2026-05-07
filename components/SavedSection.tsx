@@ -9,7 +9,7 @@ import type { SavedItem } from "@/lib/savedItem";
 import { useFavorites, useHistory } from "@/lib/useStorage";
 
 function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void }) {
-  const href = itemDetailPath(item.id, item.catalog);
+  const href = itemDetailPath(item.id, item.catalog, item.source);
 
   return (
     <div className="group flex items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-900/60 p-2 transition-colors hover:border-neutral-700">
@@ -64,6 +64,7 @@ export function FavoritesSection() {
                 imageUrl: item.imageUrl,
                 actressNames: item.actressNames,
                 catalog: item.catalog,
+                source: item.source,
               })
             }
           />
