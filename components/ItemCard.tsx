@@ -25,7 +25,7 @@ function StarRating({ avg, count }: { avg: number; count?: number }) {
 }
 
 export const ItemCard = memo(function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
-  const detailPath = itemDetailPath(item.id, catalog);
+  const detailPath = itemDetailPath(item.id, catalog, item.source);
   const detailHref = returnTo
     ? {
         pathname: detailPath,
@@ -61,7 +61,13 @@ export const ItemCard = memo(function ItemCard({ item, catalog, returnTo }: Item
             imageUrl={item.packageImageUrl}
             actressNames={item.actressNames}
             catalog={catalog}
+            source={item.source}
           />
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-300">
+            {item.sourceLabel}
+          </span>
         </div>
 
         {item.actressNames.length > 0 && (

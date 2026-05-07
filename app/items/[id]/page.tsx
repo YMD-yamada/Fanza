@@ -8,11 +8,12 @@ import { RecordHistory } from "@/components/RecordHistory";
 import { SafeDetailImage, SafeSampleImage } from "@/components/SafeMedia";
 import { VideoPreview } from "@/components/VideoPreview";
 import { getCatalog } from "@/lib/catalogs";
-import { getFanzaItemById } from "@/lib/fanza";
+import { aggregateGetById } from "@/lib/search-aggregate";
+import { isSourceId, type SourceId } from "@/lib/types";
 
 type ItemDetailProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ cat?: string; returnTo?: string }>;
+  searchParams: Promise<{ cat?: string; source?: string; returnTo?: string }>;
 };
 
 export async function generateMetadata({
@@ -22,7 +23,12 @@ export async function generateMetadata({
   const { id } = await params;
   const detailParams = await searchParams;
   const catalog = getCatalog(detailParams.cat).id;
-  const item = await getFanzaItemById(id, catalog);
+  const source = isSourceId(detailParams.source) ? (detailParams.source as SourceId) : undefined;
+  const item = await aggregateGetById({
+    id,
+    catalog,
+    ...(source ? { source } : {}),
+  });
 
   if (!item) {
     return {
@@ -35,7 +41,10 @@ export async function generateMetadata({
     item.description?.slice(0, 120) ??
     `${item.title} の作品情報ページです。出演者・ジャンル・価格・サンプル情報を確認できます。`;
   const image = item.largeImageUrl ?? item.packageImageUrl ?? undefined;
-  const path = catalog === "video" ? `/items/${item.id}` : `/items/${item.id}?cat=${catalog}`;
+  const queryParams = new URLSearchParams();
+  if (catalog !== "video") queryParams.set("cat", catalog);
+  if (source) queryParams.set("source", source);
+  const path = `/items/${item.id}${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
 
   return {
     title: item.title,
@@ -60,8 +69,13 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
   const { id } = await params;
   const detailParams = await searchParams;
   const catalog = getCatalog(detailParams.cat).id;
+  const source = isSourceId(detailParams.source) ? (detailParams.source as SourceId) : undefined;
 
-  const item = await getFanzaItemById(id, catalog);
+  const item = await aggregateGetById({
+    id,
+    catalog,
+    ...(source ? { source } : {}),
+  });
 
   if (!item) {
     notFound();
@@ -93,6 +107,7 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
             imageUrl={item.packageImageUrl}
             actressNames={item.actressNames}
             catalog={catalog}
+            source={item.source}
           />
           <div className="flex items-start gap-3">
             <h1 className="min-w-0 flex-1 text-xl font-bold leading-snug md:text-2xl">{item.title}</h1>
@@ -102,6 +117,7 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
               imageUrl={item.packageImageUrl}
               actressNames={item.actressNames}
               catalog={catalog}
+              source={item.source}
               size="md"
             />
           </div>

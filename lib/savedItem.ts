@@ -1,4 +1,5 @@
 import type { CatalogId } from "@/lib/catalogs";
+import type { SourceId } from "@/lib/types";
 
 export type SavedItemInput = {
   id: string;
@@ -6,6 +7,7 @@ export type SavedItemInput = {
   imageUrl?: string;
   actressNames: string[];
   catalog?: CatalogId;
+  source?: SourceId;
 };
 
 export type SavedItem = SavedItemInput & {
@@ -47,6 +49,10 @@ function toSavedItem(value: unknown): SavedItem | null {
       : maybe.catalog === "game"
         ? "pcgame"
         : undefined;
+  const source =
+    maybe.source === "fanza" || maybe.source === "partner"
+      ? maybe.source
+      : undefined;
 
   return {
     id: maybe.id,
@@ -57,6 +63,7 @@ function toSavedItem(value: unknown): SavedItem | null {
         : undefined,
     actressNames,
     catalog,
+    source,
     savedAt: Number.isFinite(maybe.savedAt) ? Number(maybe.savedAt) : Date.now(),
   };
 }
@@ -94,7 +101,8 @@ export function clampFavorites(
 ): SavedItem[] {
   const unique = new Map<string, SavedItem>();
   for (const item of items.sort((a, b) => b.savedAt - a.savedAt)) {
-    if (!unique.has(item.id)) unique.set(item.id, item);
+    const key = `${item.source ?? "fanza"}:${item.id}`;
+    if (!unique.has(key)) unique.set(key, item);
   }
 
   const limited: SavedItem[] = [];

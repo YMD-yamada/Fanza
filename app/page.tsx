@@ -128,6 +128,8 @@ export default async function Home({ searchParams }: HomeProps) {
               initialItems={filteredItems}
               totalCount={raw.totalCount}
               hasNext={raw.hasNext}
+              mode={raw.mode}
+              warnings={raw.warnings}
             />
           )}
         </section>
