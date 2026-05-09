@@ -1,5 +1,6 @@
 import type { SearchResponse, SearchWarning, SourceId } from "@/lib/types";
 import type { SearchRequestInput } from "@/lib/search-providers/types";
+import { dedupeCrossSourceByTitleAndDate } from "@/lib/search-merge";
 import { getEnabledProviders, getProviderById } from "@/lib/search-providers";
 
 const PROVIDER_TIMEOUT_MS = Number(process.env.PROVIDER_TIMEOUT_MS ?? "3000");
@@ -57,15 +58,17 @@ export async function aggregateSearch(input: SearchRequestInput): Promise<Search
     return [];
   });
 
-  const mergedItems = dedupeBySourceAndId(
-    results
-      .flatMap((result) => result.items)
-      .sort((a, b) => {
-        const scoreA = a.score ?? 0;
-        const scoreB = b.score ?? 0;
-        if (scoreA !== scoreB) return scoreB - scoreA;
-        return (b.releaseDate ?? "").localeCompare(a.releaseDate ?? "");
-      }),
+  const mergedItems = dedupeCrossSourceByTitleAndDate(
+    dedupeBySourceAndId(
+      results
+        .flatMap((result) => result.items)
+        .sort((a, b) => {
+          const scoreA = a.score ?? 0;
+          const scoreB = b.score ?? 0;
+          if (scoreA !== scoreB) return scoreB - scoreA;
+          return (b.releaseDate ?? "").localeCompare(a.releaseDate ?? "");
+        }),
+    ),
   );
 
   const totalCount = results.reduce((sum, result) => sum + result.totalCount, 0);

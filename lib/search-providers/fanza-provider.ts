@@ -1,6 +1,5 @@
 import { getFanzaItemById, searchFanza } from "@/lib/fanza";
 import type { SearchProvider } from "@/lib/search-providers/types";
-import { withTimeout } from "@/lib/search-providers/utils";
 
 export const fanzaProvider: SearchProvider = {
   id: "fanza",
@@ -9,34 +8,38 @@ export const fanzaProvider: SearchProvider = {
     return true;
   },
   async search(filters, ctx) {
-    const res = await withTimeout(
-      searchFanza(filters),
-      ctx.timeoutMs,
-      "fanza-provider.search",
-    );
-    return {
-      source: "fanza",
-      items: res.items.map((item) => ({
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ctx.timeoutMs);
+    try {
+      const res = await searchFanza(filters, { signal: controller.signal });
+      return {
+        source: "fanza",
+        items: res.items.map((item) => ({
+          ...item,
+          source: "fanza",
+          sourceLabel: "FANZA",
+        })),
+        totalCount: res.totalCount,
+        page: res.page,
+        hasNext: res.hasNext,
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  },
+  async getById(lookup, ctx) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ctx.timeoutMs);
+    try {
+      const item = await getFanzaItemById(lookup.id, lookup.catalog, { signal: controller.signal });
+      if (!item) return null;
+      return {
         ...item,
         source: "fanza",
         sourceLabel: "FANZA",
-      })),
-      totalCount: res.totalCount,
-      page: res.page,
-      hasNext: res.hasNext,
-    };
-  },
-  async getById(lookup, ctx) {
-    const item = await withTimeout(
-      getFanzaItemById(lookup.id, lookup.catalog),
-      ctx.timeoutMs,
-      "fanza-provider.getById",
-    );
-    if (!item) return null;
-    return {
-      ...item,
-      source: "fanza",
-      sourceLabel: "FANZA",
-    };
+      };
+    } finally {
+      clearTimeout(timer);
+    }
   },
 };

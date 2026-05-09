@@ -40,3 +40,16 @@
   - `npx tsc --noEmit` passed
   - `npm run lint` passed
   - `npm run build` passed
+
+## 2026-05-09 Session
+
+- Plan completion / hardening:
+  - `lib/search-merge.ts`: cross-provider duplicate collapse by normalized title + release date (FANZA wins).
+  - `lib/search-aggregate.ts`: applies merge after per-source dedupe + sort.
+  - `lib/fanza.ts`: optional `AbortSignal` on ItemList fetch for cancellable timeouts.
+  - `lib/search-providers/fanza-provider.ts` / `partner-provider.ts`: AbortController timeouts (removed `withTimeout`; deleted `lib/search-providers/utils.ts`).
+  - `app/page.tsx`: initial SSR search uses `aggregateSearch` so multi-provider results match `/api/search`.
+  - `README.md`: documented cross-source merge behavior.
+- Follow-up verification:
+  - `npm run lint` exit 0
+  - `npm run build` exit 0 (SWC `win32-arm64-msvc` load warning on this machine; Next falls back to WASM)
