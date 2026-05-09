@@ -1,6 +1,5 @@
 import type { NormalizedItem } from "@/lib/types";
 import type { ItemLookup, ProviderSearchFilters, SearchProvider } from "@/lib/search-providers/types";
-import { withTimeout } from "@/lib/search-providers/utils";
 
 const PARTNER_API_BASE_URL = (process.env.R18_PARTNER_API_BASE_URL ?? "").replace(/\/+$/, "");
 const PARTNER_API_KEY = process.env.R18_PARTNER_API_KEY ?? "";
@@ -65,7 +64,7 @@ function normalize(item: PartnerItem): NormalizedItem | null {
   };
 }
 
-async function fetchPartner(path: string, params?: URLSearchParams) {
+async function fetchPartner(path: string, params: URLSearchParams | undefined, signal: AbortSignal) {
   if (!PARTNER_API_BASE_URL) {
     throw new Error("R18_PARTNER_API_BASE_URL is missing.");
   }
@@ -74,6 +73,7 @@ async function fetchPartner(path: string, params?: URLSearchParams) {
   if (PARTNER_API_KEY) headers.set(PARTNER_API_KEY_HEADER, PARTNER_API_KEY);
   const response = await fetch(url, {
     headers,
+    signal,
     next: { revalidate: 120 },
   });
   if (!response.ok) {
@@ -95,18 +95,30 @@ function buildSearchParams(filters: ProviderSearchFilters): URLSearchParams {
   return params;
 }
 
-async function searchRaw(filters: ProviderSearchFilters): Promise<PartnerSearchPayload> {
-  const json = await fetchPartner("/search", buildSearchParams(filters));
-  if (!json || typeof json !== "object") return {};
-  return json as PartnerSearchPayload;
+async function searchRaw(filters: ProviderSearchFilters, timeoutMs: number): Promise<PartnerSearchPayload> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const json = await fetchPartner("/search", buildSearchParams(filters), controller.signal);
+    if (!json || typeof json !== "object") return {};
+    return json as PartnerSearchPayload;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-async function getByIdRaw(lookup: ItemLookup): Promise<PartnerItem | null> {
+async function getByIdRaw(lookup: ItemLookup, timeoutMs: number): Promise<PartnerItem | null> {
   const params = new URLSearchParams();
   if (lookup.catalog) params.set("cat", lookup.catalog);
-  const json = await fetchPartner(`/items/${encodeURIComponent(lookup.id)}`, params);
-  if (!json || typeof json !== "object") return null;
-  return json as PartnerItem;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const json = await fetchPartner(`/items/${encodeURIComponent(lookup.id)}`, params, controller.signal);
+    if (!json || typeof json !== "object") return null;
+    return json as PartnerItem;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export const partnerProvider: SearchProvider = {
@@ -116,11 +128,7 @@ export const partnerProvider: SearchProvider = {
     return Boolean(PARTNER_API_BASE_URL);
   },
   async search(filters, ctx) {
-    const data = await withTimeout(
-      searchRaw(filters),
-      ctx.timeoutMs,
-      "partner-provider.search",
-    );
+    const data = await searchRaw(filters, ctx.timeoutMs);
     const items = (data.items ?? [])
       .map(normalize)
       .filter((item): item is NormalizedItem => Boolean(item));
@@ -133,11 +141,7 @@ export const partnerProvider: SearchProvider = {
     };
   },
   async getById(lookup, ctx) {
-    const raw = await withTimeout(
-      getByIdRaw(lookup),
-      ctx.timeoutMs,
-      "partner-provider.getById",
-    );
+    const raw = await getByIdRaw(lookup, ctx.timeoutMs);
     return raw ? normalize(raw) : null;
   },
 };

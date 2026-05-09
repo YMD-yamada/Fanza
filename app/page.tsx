@@ -14,7 +14,7 @@ import {
   badgeReleaseDateJa,
 } from "@/lib/home-copy";
 import { filterNormalizedItems } from "@/lib/item-filters";
-import { searchFanza } from "@/lib/fanza";
+import { aggregateSearch } from "@/lib/search-aggregate";
 
 type HomeProps = {
   searchParams: Promise<{
@@ -42,7 +42,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const buildVersion = (process.env.VERCEL_GIT_COMMIT_SHA ?? "local").slice(0, 7);
 
   const raw = q
-    ? await searchFanza({
+    ? await aggregateSearch({
         keyword: q,
         page: 1,
         catalog,

@@ -148,7 +148,10 @@ type RawSearchResult = {
   };
 };
 
-export async function searchFanza(filters: SearchFilters): Promise<SearchResponse> {
+export async function searchFanza(
+  filters: SearchFilters,
+  options?: { signal?: AbortSignal },
+): Promise<SearchResponse> {
   ensureConfig();
 
   const cat = getCatalog(filters.catalog);
@@ -181,6 +184,7 @@ export async function searchFanza(filters: SearchFilters): Promise<SearchRespons
   }
 
   const response = await fetch(`${API_ENDPOINT}?${params.toString()}`, {
+    signal: options?.signal,
     next: { revalidate: 120 },
   });
 
@@ -199,13 +203,20 @@ export async function searchFanza(filters: SearchFilters): Promise<SearchRespons
   return { items, totalCount, page, hasNext };
 }
 
-export async function getFanzaItemById(contentId: string, catalog?: CatalogId): Promise<NormalizedItem | null> {
-  const result = await searchFanza({
-    keyword: contentId,
-    page: 1,
-    sort: "rank",
-    ...(catalog ? { catalog } : {}),
-  });
+export async function getFanzaItemById(
+  contentId: string,
+  catalog?: CatalogId,
+  options?: { signal?: AbortSignal },
+): Promise<NormalizedItem | null> {
+  const result = await searchFanza(
+    {
+      keyword: contentId,
+      page: 1,
+      sort: "rank",
+      ...(catalog ? { catalog } : {}),
+    },
+    options,
+  );
 
   return result.items.find((item) => item.id === contentId) ?? result.items[0] ?? null;
 }
