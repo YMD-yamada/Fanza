@@ -9,7 +9,8 @@ import { SafeDetailImage, SafeSampleImage } from "@/components/SafeMedia";
 import { VideoPreview } from "@/components/VideoPreview";
 import { getCatalog } from "@/lib/catalogs";
 import { aggregateGetById } from "@/lib/search-aggregate";
-import { isSourceId, type SourceId } from "@/lib/types";
+import { isProviderSourceId } from "@/lib/search-providers";
+import type { SourceId } from "@/lib/types";
 
 type ItemDetailProps = {
   params: Promise<{ id: string }>;
@@ -23,7 +24,7 @@ export async function generateMetadata({
   const { id } = await params;
   const detailParams = await searchParams;
   const catalog = getCatalog(detailParams.cat).id;
-  const source = isSourceId(detailParams.source) ? (detailParams.source as SourceId) : undefined;
+  const source = isProviderSourceId(detailParams.source) ? (detailParams.source as SourceId) : undefined;
   const item = await aggregateGetById({
     id,
     catalog,
@@ -69,7 +70,7 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
   const { id } = await params;
   const detailParams = await searchParams;
   const catalog = getCatalog(detailParams.cat).id;
-  const source = isSourceId(detailParams.source) ? (detailParams.source as SourceId) : undefined;
+  const source = isProviderSourceId(detailParams.source) ? (detailParams.source as SourceId) : undefined;
 
   const item = await aggregateGetById({
     id,

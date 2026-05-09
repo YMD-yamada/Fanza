@@ -53,17 +53,36 @@ npm run dev
 
 ## 複数API統合検索
 
-`R18_PARTNER_API_BASE_URL` を設定すると、FANZAに加えて第2プロバイダを統合検索します。
+FANZA（DMM ItemList）は常に有効です。それ以外の **公式提供のHTTP JSON API** は、次のいずれかの方法で追加します（契約・許諾は利用者の責務です）。
 
-- 検索: `GET {base}/search?q=...&page=...&sort=...`
+| 変数グループ | 説明 |
+| --- | --- |
+| `R18_PARTNER_*` | 互換用スロット（プロバイダ id は固定で `partner`） |
+| `R18_HTTP_PROVIDER_1_*` … `R18_HTTP_PROVIDER_5_*` | 追加スロット（`R18_HTTP_PROVIDER_N_ID` で slug、`R18_HTTP_PROVIDER_N_LABEL` で表示名） |
+
+### 他社R18サービスのAPIを「探す」について
+
+一般的に **他社の公開アダルト商品APIが一覧でまとまっている公式ページはほとんどありません**。多くの場合は **アフィリエイト／開発者向けポータルでの契約後** に、ドキュメントとベースURL・キーが提供されます。
+
+- **FANZA / DMM（本アプリの既定）**: [DMM Affiliate Web Service](https://affiliate.dmm.com/api/)（ItemList 等）
+- **その他サービスを使う場合**: 各社のアフィリエイト・パートナー・開発者窓口で **APIの有無と利用条件** を確認し、本アプリの **HTTPアダプター契約** に合わせてプロキシAPIを用意するか、公式が上記と同一のREST形ならそのまま `.env` のベースURLに指定してください。
+
+### HTTPアダプター契約（サーバーが期待する形）
+
+追加プロバイダのベースURL（末尾スラッシュなし）を設定すると、次を呼び出します。
+
+- 検索: `GET {base}/search?q=...&page=...&sort=...`（任意 `cat`, `gte_date`, `lte_date`）
 - 詳細: `GET {base}/items/{id}`
-- 返却項目は本アプリの `NormalizedItem` に正規化可能な形式が必要です
+- 認証: キーがあれば `R18_HTTP_PROVIDER_N_API_KEY` と `..._API_KEY_HEADER`（既定 `x-api-key`）
+
+JSON の各フィールドは `lib/search-providers/http-json-provider.ts` の `RemoteItem` 形へマップされ、`NormalizedItem` としてUIに出ます。
 
 `MULTI_SEARCH_MODE=auto` の場合:
+
 - 通常は統合リスト表示
 - 一部provider失敗・遅延時は提供元別表示へフォールバック
 
-統合結果では、タイトル（正規化） + 発売日が一致する別プロバイダの行は **FANZA優先** で1件にまとめます（`lib/search-merge.ts`）。
+統合結果では、タイトル（正規化） + 発売日が一致する別プロバイダの行は **マージ優先度（小さいほど強い）** で1件にまとめます（FANZA は 0）。`R18_*_MERGE_PRIORITY` で調整できます（`lib/search-merge.ts`）。
 
 ## 公開時の注意
 

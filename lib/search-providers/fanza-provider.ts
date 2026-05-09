@@ -4,6 +4,7 @@ import type { SearchProvider } from "@/lib/search-providers/types";
 export const fanzaProvider: SearchProvider = {
   id: "fanza",
   label: "FANZA",
+  mergePriority: 0,
   isEnabled() {
     return true;
   },

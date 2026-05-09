@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { CatalogId } from "@/lib/catalogs";
 import { filterNormalizedItems } from "@/lib/item-filters";
@@ -132,6 +132,16 @@ export function SearchResultsInfinite({
     return acc;
   }, {});
 
+  const sourceLabels = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of items) {
+      if (!map.has(item.source)) {
+        map.set(item.source, item.sourceLabel?.trim() ? item.sourceLabel : item.source);
+      }
+    }
+    return map;
+  }, [items]);
+
   const displayItems = activeSource === "all"
     ? items
     : items.filter((item) => item.source === activeSource);
@@ -183,7 +193,7 @@ export function SearchResultsInfinite({
                 activeSource === source ? "bg-sky-600 text-white" : "bg-neutral-800 text-neutral-300"
               }`}
             >
-              {source.toUpperCase()} ({count})
+              {sourceLabels.get(source) ?? source} ({count})
             </button>
           ))}
         </div>

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getCatalog } from "@/lib/catalogs";
 import { aggregateSearch } from "@/lib/search-aggregate";
-import { isSourceId, type ArticleType } from "@/lib/types";
+import { isProviderSourceId } from "@/lib/search-providers";
+import type { ArticleType } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -24,11 +25,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const sourceKey = source && isProviderSourceId(source) ? source : undefined;
     const data = await aggregateSearch({
       keyword,
       page: Number.isNaN(page) || page < 1 ? 1 : page,
       catalog,
-      ...(isSourceId(source) ? { source } : {}),
+      ...(sourceKey ? { source: sourceKey } : {}),
       sort,
       ...(gteDate ? { gteDate } : {}),
       ...(lteDate ? { lteDate } : {}),

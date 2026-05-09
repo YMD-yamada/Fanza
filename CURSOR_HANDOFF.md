@@ -53,3 +53,17 @@
 - Follow-up verification:
   - `npm run lint` exit 0
   - `npm run build` exit 0 (SWC `win32-arm64-msvc` load warning on this machine; Next falls back to WASM)
+
+## 2026-05-10 Session
+
+- Multi extra R18 HTTP adapters:
+  - `lib/search-providers/http-json-provider.ts`: factory for optional official HTTP JSON APIs (`/search`, `/items/{id}`).
+  - `lib/search-providers/index.ts`: wires legacy `R18_PARTNER_*` plus `R18_HTTP_PROVIDER_1..5_*`; exports `isProviderSourceId`, `getMergePriority`.
+  - `lib/search-providers/fanza-provider.ts` + `lib/search-providers/types.ts`: `mergePriority` on providers.
+  - Removed `lib/search-providers/partner-provider.ts` (replaced by factory).
+  - `lib/types.ts`: `SourceId` is a slug string; API routes validate via `isProviderSourceId`.
+  - `lib/search-merge.ts`: merge priority from registry (not a fixed fanza/partner map).
+  - `components/SearchResultsInfinite.tsx`: source tabs show `sourceLabel`.
+  - `lib/savedItem.ts`: accept any valid source slug.
+  - `.env.example` / `README.md`: how to add multiple providers + note that other shops rarely publish a public API index (contract/developer portals).
+- Validation: `npx tsc --noEmit` ok; `npm run lint` ok.

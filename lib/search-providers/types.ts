@@ -26,6 +26,8 @@ export type ItemLookup = {
 export interface SearchProvider {
   readonly id: SourceId;
   readonly label: string;
+  /** Lower = wins when merging duplicate title+date across providers (FANZA uses 0). */
+  readonly mergePriority: number;
   isEnabled(): boolean;
   search(filters: ProviderSearchFilters, ctx: ProviderContext): Promise<ProviderSearchResult>;
   getById(lookup: ItemLookup, ctx: ProviderContext): Promise<NormalizedItem | null>;

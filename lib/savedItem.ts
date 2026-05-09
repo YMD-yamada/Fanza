@@ -1,6 +1,15 @@
 import type { CatalogId } from "@/lib/catalogs";
 import type { SourceId } from "@/lib/types";
 
+/** Matches provider ids created by lib/search-providers/http-json-provider */
+const SOURCE_SLUG_RE = /^[a-z][a-z0-9_-]{0,31}$/;
+
+function sanitizeSourceId(value: unknown): SourceId | undefined {
+  if (typeof value !== "string") return undefined;
+  if (!SOURCE_SLUG_RE.test(value)) return undefined;
+  return value;
+}
+
 export type SavedItemInput = {
   id: string;
   title: string;
@@ -49,10 +58,7 @@ function toSavedItem(value: unknown): SavedItem | null {
       : maybe.catalog === "game"
         ? "pcgame"
         : undefined;
-  const source =
-    maybe.source === "fanza" || maybe.source === "partner"
-      ? maybe.source
-      : undefined;
+  const source = sanitizeSourceId(maybe.source);
 
   return {
     id: maybe.id,

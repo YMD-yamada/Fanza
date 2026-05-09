@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getCatalog } from "@/lib/catalogs";
 import { aggregateGetById } from "@/lib/search-aggregate";
-import { isSourceId } from "@/lib/types";
+import { isProviderSourceId } from "@/lib/search-providers";
 
 type Context = {
   params: Promise<{ id: string }>;
@@ -14,10 +14,11 @@ export async function GET(request: NextRequest, context: Context) {
   const sourceQuery = request.nextUrl.searchParams.get("source");
 
   try {
+    const sourceKey = sourceQuery && isProviderSourceId(sourceQuery) ? sourceQuery : undefined;
     const item = await aggregateGetById({
       id,
       catalog,
-      ...(isSourceId(sourceQuery) ? { source: sourceQuery } : {}),
+      ...(sourceKey ? { source: sourceKey } : {}),
     });
 
     if (!item) {

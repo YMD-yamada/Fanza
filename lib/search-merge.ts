@@ -1,4 +1,5 @@
-import type { NormalizedItem, SourceId } from "@/lib/types";
+import type { NormalizedItem } from "@/lib/types";
+import { getMergePriority } from "@/lib/search-providers";
 
 /** Normalize title for loose duplicate matching across providers */
 export function normalizeTitleKey(title: string): string {
@@ -10,14 +11,9 @@ export function normalizeTitleKey(title: string): string {
     .replace(/[\u3000]/g, " ");
 }
 
-const SOURCE_PRIORITY: Record<SourceId, number> = {
-  fanza: 0,
-  partner: 1,
-};
-
 function pickBetter(a: NormalizedItem, b: NormalizedItem): NormalizedItem {
-  const pa = SOURCE_PRIORITY[a.source] ?? 99;
-  const pb = SOURCE_PRIORITY[b.source] ?? 99;
+  const pa = getMergePriority(a.source);
+  const pb = getMergePriority(b.source);
   if (pa !== pb) return pa < pb ? a : b;
   const sa = a.score ?? 0;
   const sb = b.score ?? 0;

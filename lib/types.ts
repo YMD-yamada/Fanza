@@ -1,11 +1,9 @@
 import type { CatalogId } from "@/lib/catalogs";
 
 export type ArticleType = "actress" | "author" | "genre" | "maker" | "series" | "label";
-export type SourceId = "fanza" | "partner";
+/** Provider slug (e.g. fanza, partner, dlsite_feed). Registered in lib/search-providers. */
+export type SourceId = string;
 export type SearchMode = "unified" | "source_tabs";
-export function isSourceId(value: string | null | undefined): value is SourceId {
-  return value === "fanza" || value === "partner";
-}
 
 export type SearchFilters = {
   keyword: string;
