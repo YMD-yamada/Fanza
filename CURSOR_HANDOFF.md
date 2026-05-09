@@ -56,6 +56,7 @@
 
 ## 2026-05-10 Session
 
+- README: **調査メモ（国内）** — DMM/FANZA, DUGA official Web API link, SOKMIL/SOD/DLsite notes; clarifies most vendors need a BFF to match `http-json-provider` contract.
 - Multi extra R18 HTTP adapters:
   - `lib/search-providers/http-json-provider.ts`: factory for optional official HTTP JSON APIs (`/search`, `/items/{id}`).
   - `lib/search-providers/index.ts`: wires legacy `R18_PARTNER_*` plus `R18_HTTP_PROVIDER_1..5_*`; exports `isProviderSourceId`, `getMergePriority`.

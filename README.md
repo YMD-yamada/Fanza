@@ -24,10 +24,11 @@ cp .env.example .env.local
 - `DMM_AFFILIATE_ID`
 
 任意（複数API統合検索）:
-- `R18_PARTNER_API_BASE_URL`
-- `R18_PARTNER_API_KEY`
-- `R18_PARTNER_API_KEY_HEADER`
-- `R18_PARTNER_AFFILIATE_FALLBACK_URL`
+- `R18_PARTNER_API_BASE_URL`（互換1枠）
+- `R18_HTTP_PROVIDER_1_*` … `_5_*`（追加の公式API／自前プロキシのベースURL）
+- `R18_PARTNER_API_KEY` / `R18_HTTP_PROVIDER_N_API_KEY`（必要なら）
+- `R18_PARTNER_API_KEY_HEADER` / `R18_HTTP_PROVIDER_N_API_KEY_HEADER`
+- `R18_PARTNER_AFFILIATE_FALLBACK_URL` / `R18_HTTP_PROVIDER_N_AFFILIATE_FALLBACK_URL`
 - `MULTI_SEARCH_MODE` (`auto` / `unified` / `source_tabs`)
 - `PROVIDER_TIMEOUT_MS`
 - `MULTI_FALLBACK_SLOW_MS`
@@ -66,6 +67,21 @@ FANZA（DMM ItemList）は常に有効です。それ以外の **公式提供の
 
 - **FANZA / DMM（本アプリの既定）**: [DMM Affiliate Web Service](https://affiliate.dmm.com/api/)（ItemList 等）
 - **その他サービスを使う場合**: 各社のアフィリエイト・パートナー・開発者窓口で **APIの有無と利用条件** を確認し、本アプリの **HTTPアダプター契約** に合わせてプロキシAPIを用意するか、公式が上記と同一のREST形ならそのまま `.env` のベースURLに指定してください。
+
+### 調査メモ（国内・公開情報ベース／2026）
+
+「どのサイトがあるか」を網羅する**公式の総覧ページ**はほぼありません。以下はリポジトリ用途（検索用データ取得）の観点で、**公式に Web API（または同等のウェブサービス）が説明されている例**と、**SOD**の整理です。
+
+| 名前 | 分かること | 本アプリへの直結 |
+| --- | --- | --- |
+| **FANZA / DMM** | [DMM アフィリエイト Webサービス](https://affiliate.dmm.com/api/) — ItemList・女優検索・フロア一覧など多数 | **ネイティブ対応**（既存 `fanza` プロバイダ） |
+| **DUGA（APEX）** | [ウェブサービス（Web API）公式](https://duga.jp/aff/api.html) — キーワード／カテゴリ等、JSON/XML、**クレジット表示義務**、レート制限（例: 60秒あたり60リクエスト/アプリID） | **形式が異なる**ため、自前の BFF／プロキシで `http-json-provider` 契約（`/search`, `/items/{id}`）に正規化する必要あり |
+| **SOKMIL** | アフィリエイト向けに API が言及されることがある。最新仕様は **[ソクミルアフィリエイト](https://sokmil-ad.com/)** 登録後の案内を優先 | 多くの場合エンドポイント・パラメータが本アプリの汎用契約と**一致しない** → BFF 推奨 |
+| **SOD（ソフト・オン・デマンド）** | コーポレート: [事業内容等](https://corporate.sod.co.jp/)。アフィリエイトは **楽天アフィリエイト等のASP経由**で「SODプライム」等の案件が取り扱われる例が多く、**DMM の ItemList のような開発者向け REST の公式ドキュメントは公開情報からは確認できない**（リンク・バナー中心の提携が主）。商品データを API で扱えるかは **ASP／SOD 側のパートナー窓口への問い合わせ**が必要 | 直指定の `BASE_URL` は**不可**。取得できるならプロキシ経由で当アダプター形式に変換 |
+
+**DLsite（同人）** はアフィリエイト登録はあるが、**一般向けに「検索用の公式 REST API」が掲載されているわけではない**ことが多く、コミュニティ製クライアントは**規約と整合**を必ず確認してください。
+
+要するに、**FANZA以外で「公式データAPIが存在する」例はDUGAのように限定的**で、かつ**本リポの `R18_HTTP_PROVIDER_*` にそのままベースURLを入れられるのは、パスとJSONが完全に一致する場合のみ**です。多くは **1 本の小さなプロキシ（Vercel Functions 等）** でベンダー API → 当アダプター形式への変換を挟みます。
 
 ### HTTPアダプター契約（サーバーが期待する形）
 
