@@ -54,6 +54,14 @@
   - `npm run lint` exit 0
   - `npm run build` exit 0 (SWC `win32-arm64-msvc` load warning on this machine; Next falls back to WASM)
 
+## 2026-05-11 Session
+
+- FANZA-only product: removed extra HTTP providers (`http-json-provider` deleted); `lib/search-providers/index.ts` registers **fanza** only.
+- UX / growth: `lib/recent-queries.ts` + `RecentQueriesBar`, `ShareSearchLink` (UTM on copy), SearchBar **/** focus + `rememberRecentQuery`, `GrowthFooter` + `NEXT_PUBLIC_FEEDBACK_URL`, improved empty / no-hit copy in `home-copy.ts`.
+- `SearchResultsInfinite`: hide redundant source tabs when a single provider.
+- `.env.example` / `README.md`: FANZA-only docs; dropped `R18_*` partner envs.
+- Validation: `npx tsc --noEmit`, `npm run build` ok.
+
 ## 2026-05-10 Session
 
 - README: **調査メモ（国内）** — DMM/FANZA, DUGA official Web API link, SOKMIL/SOD/DLsite notes; clarifies most vendors need a BFF to match `http-json-provider` contract.

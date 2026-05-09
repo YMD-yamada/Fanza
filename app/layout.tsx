@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { ApiCredit } from "@/components/ApiCredit";
+import { GrowthFooter } from "@/components/GrowthFooter";
 import { AgeGate } from "@/components/AgeGate";
 import { PrivateModeToggle } from "@/components/PrivateModeToggle";
 import "./globals.css";
@@ -83,6 +84,7 @@ export default function RootLayout({
           {children}
         </main>
         <ApiCredit />
+        <GrowthFooter />
         <PrivateModeToggle />
       </body>
     </html>

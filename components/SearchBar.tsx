@@ -2,7 +2,10 @@
 
 import { getCatalog } from "@/lib/catalogs";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useCallback, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { ShareSearchLink } from "@/components/ShareSearchLink";
+import { rememberRecentQuery } from "@/lib/recent-queries";
 
 const sortOptions = [
   { value: "rank", label: "人気" },
@@ -136,6 +139,7 @@ function PillRow({ label, options, activeIdx, color = "sky", onPick }: {
 export function SearchBar() {
   const router = useRouter();
   const sp = useSearchParams();
+  const inputRef = useRef<HTMLInputElement>(null);
   const catKey = sp.get("cat") ?? "";
   const catalogSpec = useMemo(() => getCatalog(catKey || null), [catKey]);
 
@@ -200,7 +204,20 @@ export function SearchBar() {
     if (pmx) params.set("price_max", pmx);
     if (hv) params.set("has_video", "1");
     router.push(`/?${params.toString()}`);
+    rememberRecentQuery({ q, cat: catalogSpec.id });
   }, [catalogSpec.id, currentQuery, sort, gteDate, priceMin, priceMax, hasVideo, router]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "/" || event.ctrlKey || event.metaKey || event.altKey) return;
+      const tag = (event.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      event.preventDefault();
+      inputRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -248,13 +265,21 @@ export function SearchBar() {
     <div className="space-y-4">
       <form onSubmit={onSubmit} className="flex flex-col gap-2 sm:flex-row">
         <input
+          ref={inputRef}
           value={freeText}
           onChange={(e) => setFreeText(e.target.value)}
           placeholder={placeholder}
+          title="キーワード（一覧以外では / キーでもフォーカス）"
+          aria-label="検索キーワード"
           className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm outline-none transition-colors placeholder:text-neutral-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
         />
         <button type="submit" className="rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-500 active:bg-sky-700 sm:w-auto">検索</button>
       </form>
+
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-[10px] text-neutral-600">フォーカスが他にないとき <kbd className="rounded border border-neutral-600 bg-neutral-900 px-1 font-mono text-[10px]">/</kbd> で検索欄へ。</p>
+        <ShareSearchLink />
+      </div>
 
       <PillRow label="並び替え" options={sortOptions} activeIdx={sortIdx} color="sky" onPick={pickSort} />
       <PillRow label="公開時期" options={datePresets} activeIdx={activeDateIdx} color="violet" onPick={pickDate} />

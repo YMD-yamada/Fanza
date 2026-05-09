@@ -1,5 +1,6 @@
 import { AccountPanel } from "@/components/AccountPanel";
 import { CatalogTabs } from "@/components/CatalogTabs";
+import { RecentQueriesBar } from "@/components/RecentQueriesBar";
 import { FavoritesSection, HistorySection } from "@/components/SavedSection";
 import { SearchBar } from "@/components/SearchBar";
 import { SearchResultsInfinite } from "@/components/SearchResultsInfinite";
@@ -9,6 +10,7 @@ import {
   HOME_EMPTY_PROMPT,
   HOME_HEADING_DESCRIPTION,
   HOME_HEADING_TITLE,
+  HOME_NO_RESULTS_HINT,
   HOME_NO_RESULTS_MESSAGE,
   badgePriceRangeJa,
   badgeReleaseDateJa,
@@ -91,6 +93,8 @@ export default async function Home({ searchParams }: HomeProps) {
       <CatalogTabs active={catalog} tabParams={tabParams} />
       <SearchBar key={`searchbar-${catalog}`} />
 
+      {!q && <RecentQueriesBar />}
+
       {!q && (
         <>
           <FavoritesSection />
@@ -112,8 +116,9 @@ export default async function Home({ searchParams }: HomeProps) {
           </div>
 
           {filteredItems.length === 0 && !raw.hasNext ? (
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-5 py-8 text-center text-sm text-neutral-400">
-              {HOME_NO_RESULTS_MESSAGE}
+            <div className="space-y-2 rounded-xl border border-neutral-800 bg-neutral-900/60 px-5 py-8 text-center text-sm text-neutral-400">
+              <p>{HOME_NO_RESULTS_MESSAGE}</p>
+              <p className="text-xs text-neutral-500">{HOME_NO_RESULTS_HINT}</p>
             </div>
           ) : (
             <SearchResultsInfinite

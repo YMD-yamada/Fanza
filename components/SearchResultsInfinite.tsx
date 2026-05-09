@@ -142,6 +142,10 @@ export function SearchResultsInfinite({
     return map;
   }, [items]);
 
+  const showSourceTabs =
+    responseMode === "source_tabs" &&
+    (Object.keys(sourceCounts).length > 1 || apiWarnings.length > 0);
+
   const displayItems = activeSource === "all"
     ? items
     : items.filter((item) => item.source === activeSource);
@@ -169,11 +173,11 @@ export function SearchResultsInfinite({
         <span className="text-xs text-neutral-600">
           （下端までスクロールで続きを読み込み）
         </span>
-        {responseMode === "source_tabs" && (
+        {showSourceTabs && (
           <span className="text-xs text-amber-300">（速度優先モード: 提供元切替）</span>
         )}
       </div>
-      {responseMode === "source_tabs" && (
+      {showSourceTabs && (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
