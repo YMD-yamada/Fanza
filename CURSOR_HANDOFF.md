@@ -76,3 +76,8 @@
   - `lib/savedItem.ts`: accept any valid source slug.
   - `.env.example` / `README.md`: how to add multiple providers + note that other shops rarely publish a public API index (contract/developer portals).
 - Validation: `npx tsc --noEmit` ok; `npm run lint` ok.
+
+## 2026-06-19 Session
+
+- Consultation only: answered whether existing Cursor-managed apps can be carried over to Claude Code, and whether Claude Code can work with GitHub and Vercel.
+- No application code changes were made.
