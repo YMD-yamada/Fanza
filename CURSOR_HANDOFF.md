@@ -1,5 +1,19 @@
 # CURSOR HANDOFF
 
+> 移行メモ: 今後の開発は **Claude Code** で続行する想定です。手順は
+> `docs/CLAUDE_CODE_MIGRATION.md`、エージェント向けの常設ガイドは `CLAUDE.md` を参照。
+
+## 2026-06-19 Session — Claude Code 移行準備
+
+- Cursor → Claude Code への引き継ぎを整備（コード/Git/GitHub/Vercel はそのまま継続可能）。
+- `docs/CLAUDE_CODE_MIGRATION.md` を新規作成（セットアップ、GitHub 連携、Vercel 連携、
+  新規プロジェクトの始め方を日本語で記載）。
+- `CLAUDE.md` を最小（`@AGENTS.md` のみ）からプロジェクトガイドへ拡充
+  （概要・コマンド・構成・規約・Git/PR・デプロイ）。
+- クリーンアップ: 誤コミットされていた Cursor デバッグログ `.cursor/debug-*.log`（約4MB）を
+  削除し、`.gitignore` に `.cursor/` を追加。
+- 検証: `npm run lint` / `npx tsc --noEmit` / `npm run build`（下記参照）。
+
 ## 2026-05-07 Session
 
 - Added legal/compliance hardening:
