@@ -81,3 +81,10 @@
 
 - Consultation only: answered whether existing Cursor-managed apps can be carried over to Claude Code, and whether Claude Code can work with GitHub and Vercel.
 - No application code changes were made.
+
+## 2026-06-20 Session
+
+- Added Claude Code migration support:
+  - `CLAUDE.md`: expanded from an `AGENTS.md` pointer into project overview, commands, environment/deployment notes, handoff rules, and 3D printing boundaries.
+  - `docs/claude-code-migration.md`: Japanese migration checklist for Cursor -> Claude Code, GitHub/Vercel setup, and 3D printer data creation workflow.
+- No application runtime code changed.
