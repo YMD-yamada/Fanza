@@ -102,7 +102,7 @@ docker run -d --name fanza-web -p 3000:3000 \
 
 アカウント同期（`NEXT_PUBLIC_ENABLE_ACCOUNT_SYNC=1`）を使う場合は、**Vercel Blob（private）** にユーザー／お気に入り JSON を保存します（`BLOB_READ_WRITE_TOKEN`）。Docker/VPS では従来どおり `FANZA_APP_DATA_DIR` のファイル保存も使えます。
 
-ログインすると **作品・人・項目** のお気に入りが同一アカウントで別ブラウザと共有されます。HTTPS 上ではセッション Cookie が `Secure` になります（`NODE_ENV=production`）。
+ログインすると **作品・人・項目** のお気に入りが同一アカウントで別ブラウザと共有されます。認証は **パスキー（WebAuthn）** です（パスワード入力は使いません）。HTTPS 上ではセッション Cookie が `Secure` になります（`NODE_ENV=production`）。`NEXT_PUBLIC_SITE_URL` を本番ドメインに設定してください（RP ID 用）。
 
 ### GitHub Actions
 

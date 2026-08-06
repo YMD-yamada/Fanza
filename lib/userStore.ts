@@ -8,6 +8,11 @@ import {
   type FavoriteTerm,
   sanitizeFavoriteTerms,
 } from "@/lib/favorite-terms";
+import {
+  type StoredPasskey,
+  type WebAuthnChallengeRecord,
+  isChallengeExpired,
+} from "@/lib/passkey";
 import type { SavedItem } from "@/lib/savedItem";
 import { clampFavorites } from "@/lib/savedItem";
 
@@ -24,10 +29,12 @@ const BLOB_PATH = "fanza/users.json";
 type StoredUser = {
   id: string;
   email: string;
-  passwordHash: string;
+  /** Optional legacy password hash (`salt:hash`). Passkey-only accounts omit this. */
+  passwordHash?: string;
   createdAt: string;
   favorites: SavedItem[];
   favoriteTerms: FavoriteTerm[];
+  passkeys: StoredPasskey[];
 };
 
 type StoredSession = {
@@ -39,6 +46,7 @@ type StoredSession = {
 type UserStoreShape = {
   users: StoredUser[];
   sessions: StoredSession[];
+  webauthnChallenges: WebAuthnChallengeRecord[];
 };
 
 export type UserProfile = {
@@ -47,7 +55,7 @@ export type UserProfile = {
   createdAt: string;
 };
 
-const EMPTY_STORE: UserStoreShape = { users: [], sessions: [] };
+const EMPTY_STORE: UserStoreShape = { users: [], sessions: [], webauthnChallenges: [] };
 let writeLock: Promise<void> = Promise.resolve();
 
 function isBlobStoreEnabled(): boolean {
@@ -66,18 +74,56 @@ function toProfile(user: StoredUser): UserProfile {
   return { id: user.id, email: user.email, createdAt: user.createdAt };
 }
 
+function sanitizePasskeys(input: unknown): StoredPasskey[] {
+  if (!Array.isArray(input)) return [];
+  const out: StoredPasskey[] = [];
+  for (const value of input) {
+    if (!value || typeof value !== "object") continue;
+    const maybe = value as Partial<StoredPasskey>;
+    if (typeof maybe.credentialId !== "string" || !maybe.credentialId) continue;
+    if (typeof maybe.publicKey !== "string" || !maybe.publicKey) continue;
+    out.push({
+      credentialId: maybe.credentialId,
+      publicKey: maybe.publicKey,
+      counter: Number.isFinite(maybe.counter) ? Number(maybe.counter) : 0,
+      ...(Array.isArray(maybe.transports) ? { transports: maybe.transports } : {}),
+      ...(typeof maybe.deviceType === "string" ? { deviceType: maybe.deviceType } : {}),
+      ...(typeof maybe.backedUp === "boolean" ? { backedUp: maybe.backedUp } : {}),
+      createdAt:
+        typeof maybe.createdAt === "string" ? maybe.createdAt : new Date().toISOString(),
+    });
+  }
+  return out;
+}
+
 function normalizeStore(raw: Partial<UserStoreShape> | null | undefined): UserStoreShape {
   const users = Array.isArray(raw?.users)
     ? raw.users.map((user) => ({
         ...user,
+        passwordHash:
+          typeof user.passwordHash === "string" && user.passwordHash.length > 0
+            ? user.passwordHash
+            : undefined,
         favorites: Array.isArray(user.favorites) ? user.favorites : [],
         favoriteTerms: sanitizeFavoriteTerms(
           Array.isArray(user.favoriteTerms) ? user.favoriteTerms : [],
         ),
+        passkeys: sanitizePasskeys(user.passkeys),
       }))
     : [];
   const sessions = Array.isArray(raw?.sessions) ? raw.sessions : [];
-  return { users, sessions };
+  const webauthnChallenges = Array.isArray(raw?.webauthnChallenges)
+    ? raw.webauthnChallenges.filter(
+        (item) =>
+          item &&
+          typeof item.challenge === "string" &&
+          typeof item.email === "string" &&
+          typeof item.userId === "string" &&
+          typeof item.expiresAt === "string" &&
+          (item.type === "registration" || item.type === "authentication"),
+      )
+    : [];
+  return { users, sessions, webauthnChallenges };
 }
 
 async function ensureDataFile() {
@@ -147,13 +193,20 @@ function removeExpiredSessions(store: UserStoreShape) {
   );
 }
 
+function pruneChallenges(store: UserStoreShape) {
+  store.webauthnChallenges = store.webauthnChallenges.filter(
+    (item) => !isChallengeExpired(item.expiresAt),
+  );
+}
+
 export type CreateStoredUserResult =
   | { ok: true; user: UserProfile }
   | { ok: false; reason: "email_taken" };
 
 export async function createStoredUser(
   email: string,
-  passwordHash: string,
+  passwordHash?: string,
+  passkeys: StoredPasskey[] = [],
 ): Promise<CreateStoredUserResult> {
   const normalizedEmail = normalizeEmail(email);
   const store = await readStore();
@@ -164,12 +217,41 @@ export async function createStoredUser(
   const user: StoredUser = {
     id: randomBytes(16).toString("hex"),
     email: normalizedEmail,
-    passwordHash,
+    ...(passwordHash ? { passwordHash } : {}),
     createdAt: new Date().toISOString(),
     favorites: [],
     favoriteTerms: [],
+    passkeys: sanitizePasskeys(passkeys),
   };
   store.users.unshift(user);
+  await writeStore(store);
+  return { ok: true, user: toProfile(user) };
+}
+
+export async function createPasskeyUser(params: {
+  id: string;
+  email: string;
+  passkey: StoredPasskey;
+}): Promise<CreateStoredUserResult> {
+  const normalizedEmail = normalizeEmail(params.email);
+  const store = await readStore();
+  if (store.users.some((u) => u.email === normalizedEmail || u.id === params.id)) {
+    return { ok: false, reason: "email_taken" };
+  }
+
+  const user: StoredUser = {
+    id: params.id,
+    email: normalizedEmail,
+    createdAt: new Date().toISOString(),
+    favorites: [],
+    favoriteTerms: [],
+    passkeys: [params.passkey],
+  };
+  store.users.unshift(user);
+  pruneChallenges(store);
+  store.webauthnChallenges = store.webauthnChallenges.filter(
+    (item) => item.email !== normalizedEmail,
+  );
   await writeStore(store);
   return { ok: true, user: toProfile(user) };
 }
@@ -181,7 +263,7 @@ export async function verifyUser(
   const normalizedEmail = normalizeEmail(email);
   const store = await readStore();
   const user = store.users.find((u) => u.email === normalizedEmail);
-  if (!user) return null;
+  if (!user?.passwordHash) return null;
 
   const [salt, hashHex] = user.passwordHash.split(":");
   if (!salt || !hashHex) return null;
@@ -200,6 +282,93 @@ export async function findUserById(userId: string): Promise<UserProfile | null> 
   const store = await readStore();
   const user = store.users.find((u) => u.id === userId);
   return user ? toProfile(user) : null;
+}
+
+export async function findUserByPasskeyId(
+  credentialId: string,
+): Promise<(StoredUser & { passkey: StoredPasskey }) | null> {
+  const store = await readStore();
+  for (const user of store.users) {
+    const passkey = user.passkeys.find((item) => item.credentialId === credentialId);
+    if (passkey) return { ...user, passkey };
+  }
+  return null;
+}
+
+export async function saveWebAuthnChallenge(record: WebAuthnChallengeRecord): Promise<void> {
+  const store = await readStore();
+  pruneChallenges(store);
+  store.webauthnChallenges = store.webauthnChallenges.filter(
+    (item) => !(item.email === record.email && item.type === record.type),
+  );
+  store.webauthnChallenges.push(record);
+  await writeStore(store);
+}
+
+export async function consumeWebAuthnChallenge(params: {
+  email: string;
+  type: WebAuthnChallengeRecord["type"];
+}): Promise<WebAuthnChallengeRecord | null> {
+  const store = await readStore();
+  pruneChallenges(store);
+  const index = store.webauthnChallenges.findIndex(
+    (item) => item.email === normalizeEmail(params.email) && item.type === params.type,
+  );
+  if (index < 0) {
+    await writeStore(store);
+    return null;
+  }
+  const [record] = store.webauthnChallenges.splice(index, 1);
+  await writeStore(store);
+  return record ?? null;
+}
+
+export async function consumeWebAuthnChallengeByValue(
+  challenge: string,
+  type: WebAuthnChallengeRecord["type"],
+): Promise<WebAuthnChallengeRecord | null> {
+  const store = await readStore();
+  pruneChallenges(store);
+  const index = store.webauthnChallenges.findIndex(
+    (item) => item.challenge === challenge && item.type === type,
+  );
+  if (index < 0) {
+    await writeStore(store);
+    return null;
+  }
+  const [record] = store.webauthnChallenges.splice(index, 1);
+  await writeStore(store);
+  return record ?? null;
+}
+
+export async function addPasskeyToUser(
+  userId: string,
+  passkey: StoredPasskey,
+): Promise<boolean> {
+  const store = await readStore();
+  const user = store.users.find((u) => u.id === userId);
+  if (!user) return false;
+  if (user.passkeys.some((item) => item.credentialId === passkey.credentialId)) {
+    return true;
+  }
+  user.passkeys.push(passkey);
+  await writeStore(store);
+  return true;
+}
+
+export async function updatePasskeyCounter(
+  userId: string,
+  credentialId: string,
+  counter: number,
+): Promise<boolean> {
+  const store = await readStore();
+  const user = store.users.find((u) => u.id === userId);
+  if (!user) return false;
+  const passkey = user.passkeys.find((item) => item.credentialId === credentialId);
+  if (!passkey) return false;
+  passkey.counter = counter;
+  await writeStore(store);
+  return true;
 }
 
 export async function createStoredSession(
