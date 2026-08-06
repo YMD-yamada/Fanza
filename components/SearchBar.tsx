@@ -5,7 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ShareSearchLink } from "@/components/ShareSearchLink";
+import { TermFavoriteButton } from "@/components/TermFavoriteButton";
+import { loadFavoriteTerms } from "@/lib/favorite-terms";
 import { rememberRecentQuery } from "@/lib/recent-queries";
+import { useFavoriteTerms } from "@/lib/useStorage";
 
 const sortOptions = [
   { value: "rank", label: "人気" },
@@ -154,14 +157,28 @@ export function SearchBar() {
           : videoQuickKeywordGroups;
 
   const initialQ = sp.get("q") ?? "";
+  const initialFavoriteKeywords =
+    typeof window === "undefined"
+      ? []
+      : loadFavoriteTerms()
+          .filter((term) => term.kind === "keyword")
+          .map((term) => term.name);
 
   const [freeText, setFreeText] = useState(() => {
-    const all = quickKeywordGroups.flatMap((g) => g.keywords);
+    const all = [
+      ...quickKeywordGroups.flatMap((g) => g.keywords),
+      ...initialFavoriteKeywords,
+    ];
     let text = initialQ;
     for (const kw of all) text = text.replaceAll(kw, "");
     return text.replace(/\s+/g, " ").trim();
   });
-  const [selectedChips, setSelectedChips] = useState(() => parseSelectedChips(initialQ, quickKeywordGroups));
+  const [selectedChips, setSelectedChips] = useState(() =>
+    parseSelectedChips(initialQ, [
+      ...quickKeywordGroups,
+      { keywords: initialFavoriteKeywords },
+    ]),
+  );
   const [sort, setSort] = useState(sp.get("sort") ?? "rank");
   const [gteDate, setGteDate] = useState(sp.get("gte_date") ?? "");
   const [activeDateIdx, setActiveDateIdx] = useState(() => matchDatePreset(sp.get("gte_date") ?? ""));
@@ -169,6 +186,7 @@ export function SearchBar() {
   const [priceMax, setPriceMax] = useState(sp.get("price_max") ?? "");
   const [activePriceIdx, setActivePriceIdx] = useState(() => Math.max(0, matchPricePreset(sp.get("price_min") ?? "", sp.get("price_max") ?? "")));
   const [hasVideo, setHasVideo] = useState(sp.get("has_video") === "1");
+  const { people: favPeople, keywords: favKeywords } = useFavoriteTerms();
 
   const currentQuery = useMemo(() => buildQuery(selectedChips, freeText), [selectedChips, freeText]);
 
@@ -259,6 +277,20 @@ export function SearchBar() {
     navigate({ q: buildQuery(next, freeText) });
   };
 
+  const applyFavoritePerson = (name: string) => {
+    setFreeText(name);
+    setSelectedChips(new Set());
+    navigate({ q: name });
+  };
+
+  const applyFavoriteKeyword = (kw: string) => {
+    const next = new Set(selectedChips);
+    if (next.has(kw)) next.delete(kw);
+    else next.add(kw);
+    setSelectedChips(next);
+    navigate({ q: buildQuery(next, freeText) });
+  };
+
   const sortIdx = sortOptions.findIndex((o) => o.value === sort);
 
   return (
@@ -296,13 +328,78 @@ export function SearchBar() {
       )}
 
       <div className="space-y-3">
+        {(favPeople.length > 0 || favKeywords.length > 0) && (
+          <div className="space-y-3 rounded-xl border border-red-500/20 bg-red-500/5 px-3 py-3">
+            <span className="text-[11px] font-medium tracking-wide text-red-300/80">お気に入りから検索</span>
+            {favPeople.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-[10px] text-neutral-500">人</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {favPeople.map((term) => (
+                    <span key={`person:${term.name}`} className="inline-flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => applyFavoritePerson(term.name)}
+                        className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                          freeText === term.name && selectedChips.size === 0
+                            ? "border-sky-500/60 bg-sky-500/20 text-sky-200"
+                            : "border-neutral-700/60 text-neutral-300 hover:border-sky-500/40 hover:text-white"
+                        }`}
+                      >
+                        {term.name}
+                      </button>
+                      <TermFavoriteButton kind="person" name={term.name} />
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {favKeywords.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-[10px] text-neutral-500">項目</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {favKeywords.map((term) => (
+                    <span key={`keyword:${term.name}`} className="inline-flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => applyFavoriteKeyword(term.name)}
+                        className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                          selectedChips.has(term.name)
+                            ? "border-pink-500/60 bg-pink-500/20 text-pink-300"
+                            : "border-neutral-700/60 text-neutral-300 hover:border-pink-500/40 hover:text-white"
+                        }`}
+                      >
+                        {term.name}
+                      </button>
+                      <TermFavoriteButton kind="keyword" name={term.name} />
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <span className="text-[11px] font-medium tracking-wide text-neutral-500">クイック検索（複数選択可）</span>
         {quickKeywordGroups.map((group) => (
           <div key={group.label} className="space-y-1">
             <span className="text-[10px] text-neutral-600">{group.label}</span>
             <div className="flex flex-wrap gap-1.5">
               {group.keywords.map((kw) => (
-                <button key={kw} type="button" onClick={() => toggleChip(kw)} className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${selectedChips.has(kw) ? "border-pink-500/60 bg-pink-500/20 text-pink-300" : "border-neutral-700/60 text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"}`}>{kw}</button>
+                <span key={kw} className="inline-flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleChip(kw)}
+                    className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                      selectedChips.has(kw)
+                        ? "border-pink-500/60 bg-pink-500/20 text-pink-300"
+                        : "border-neutral-700/60 text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"
+                    }`}
+                  >
+                    {kw}
+                  </button>
+                  <TermFavoriteButton kind="keyword" name={kw} />
+                </span>
               ))}
             </div>
           </div>

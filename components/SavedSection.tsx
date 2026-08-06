@@ -4,9 +4,10 @@ import Link from "next/link";
 
 import { CollectionCapacityMeter } from "@/components/CollectionCapacity";
 import { SafeThumbnail } from "@/components/SafeMedia";
+import { TermFavoriteButton } from "@/components/TermFavoriteButton";
 import { itemDetailPath } from "@/lib/item-link";
 import type { SavedItem } from "@/lib/savedItem";
-import { useFavorites, useHistory } from "@/lib/useStorage";
+import { useFavoriteTerms, useFavorites, useHistory } from "@/lib/useStorage";
 
 function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void }) {
   const href = itemDetailPath(item.id, item.catalog, item.source);
@@ -38,39 +39,92 @@ function ItemRow({ item, onRemove }: { item: SavedItem; onRemove?: () => void })
   );
 }
 
+function termSearchHref(name: string): string {
+  const params = new URLSearchParams();
+  params.set("q", name);
+  params.set("sort", "rank");
+  return `/?${params.toString()}`;
+}
+
 export function FavoritesSection() {
   const { items, toggle, capacity, isSynced } = useFavorites();
-  if (items.length === 0) return null;
+  const { people, keywords } = useFavoriteTerms();
+  if (items.length === 0 && people.length === 0 && keywords.length === 0) return null;
 
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">
           <span className="mr-1.5 text-red-400">♥</span>お気に入り
-          <span className="ml-1.5 text-xs text-neutral-500">({items.length})</span>
+          <span className="ml-1.5 text-xs text-neutral-500">
+            (作品 {items.length} / 人 {people.length} / 項目 {keywords.length})
+          </span>
         </h2>
-        <span className="text-xs text-neutral-500">{isSynced ? "同期中" : "この端末のみ"}</span>
+        <span className="text-xs text-neutral-500">{isSynced ? "作品は同期中" : "この端末のみ"}</span>
       </div>
-      <CollectionCapacityMeter capacity={capacity} />
-      <div className="grid gap-2 md:grid-cols-2">
-        {items.slice(0, 10).map((item) => (
-          <ItemRow
-            key={item.id}
-            item={item}
-            onRemove={() =>
-              toggle({
-                id: item.id,
-                title: item.title,
-                imageUrl: item.imageUrl,
-                actressNames: item.actressNames,
-                catalog: item.catalog,
-                source: item.source,
-              })
-            }
-          />
-        ))}
-      </div>
-      {items.length > 10 && <p className="text-xs text-neutral-500">他 {items.length - 10} 件</p>}
+
+      {people.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[11px] text-neutral-500">人</p>
+          <div className="flex flex-wrap gap-1.5">
+            {people.map((term) => (
+              <span
+                key={`person:${term.name}`}
+                className="inline-flex items-center gap-0.5 rounded-full border border-neutral-700 bg-neutral-900 py-0.5 pl-2.5 pr-0.5"
+              >
+                <Link href={termSearchHref(term.name)} className="text-xs text-neutral-200 hover:text-white">
+                  {term.name}
+                </Link>
+                <TermFavoriteButton kind="person" name={term.name} />
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {keywords.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[11px] text-neutral-500">項目</p>
+          <div className="flex flex-wrap gap-1.5">
+            {keywords.map((term) => (
+              <span
+                key={`keyword:${term.name}`}
+                className="inline-flex items-center gap-0.5 rounded-full border border-neutral-700 bg-neutral-900 py-0.5 pl-2.5 pr-0.5"
+              >
+                <Link href={termSearchHref(term.name)} className="text-xs text-neutral-200 hover:text-white">
+                  {term.name}
+                </Link>
+                <TermFavoriteButton kind="keyword" name={term.name} />
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {items.length > 0 && (
+        <>
+          <CollectionCapacityMeter capacity={capacity} />
+          <div className="grid gap-2 md:grid-cols-2">
+            {items.slice(0, 10).map((item) => (
+              <ItemRow
+                key={`${item.source ?? "fanza"}:${item.id}`}
+                item={item}
+                onRemove={() =>
+                  toggle({
+                    id: item.id,
+                    title: item.title,
+                    imageUrl: item.imageUrl,
+                    actressNames: item.actressNames,
+                    catalog: item.catalog,
+                    source: item.source,
+                  })
+                }
+              />
+            ))}
+          </div>
+          {items.length > 10 && <p className="text-xs text-neutral-500">他 {items.length - 10} 件</p>}
+        </>
+      )}
     </section>
   );
 }
@@ -86,7 +140,7 @@ export function HistorySection() {
       </h2>
       <div className="grid gap-2 md:grid-cols-2">
         {items.slice(0, 8).map((item) => (
-          <ItemRow key={item.id} item={item} />
+          <ItemRow key={`${item.source ?? "fanza"}:${item.id}`} item={item} />
         ))}
       </div>
     </section>

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { AffiliateButton } from "@/components/AffiliateButton";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { FavoriteGenreChip, FavoriteTermLink } from "@/components/FavoriteTermLink";
 import { RecordHistory } from "@/components/RecordHistory";
 import { SafeDetailImage, SafeSampleImage } from "@/components/SafeMedia";
 import { VideoPreview } from "@/components/VideoPreview";
@@ -129,7 +130,11 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
             {item.actressNames.length > 0 && (
               <>
                 <dt className="text-neutral-500">出演</dt>
-                <dd className="text-neutral-200">{item.actressNames.join("、")}</dd>
+                <dd className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  {item.actressNames.map((name) => (
+                    <FavoriteTermLink key={name} kind="person" name={name} catalog={catalog} />
+                  ))}
+                </dd>
               </>
             )}
             {item.genres.length > 0 && (
@@ -137,9 +142,7 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
                 <dt className="text-neutral-500">ジャンル</dt>
                 <dd className="flex flex-wrap gap-1">
                   {item.genres.map((g) => (
-                    <span key={g} className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-neutral-300">
-                      {g}
-                    </span>
+                    <FavoriteGenreChip key={g} name={g} catalog={catalog} />
                   ))}
                 </dd>
               </>

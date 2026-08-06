@@ -3,6 +3,17 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import {
+  FAVORITE_TERMS_EVENT,
+  FAVORITE_TERMS_KEY,
+  type FavoriteTerm,
+  type FavoriteTermKind,
+  isFavoriteTerm,
+  loadFavoriteTerms,
+  sanitizeFavoriteTerms,
+  saveFavoriteTerms,
+  toggleFavoriteTerm,
+} from "@/lib/favorite-terms";
+import {
   FAVORITES_LIMIT,
   FAVORITES_MAX_BYTES,
   type SavedItem,
@@ -282,3 +293,57 @@ export function useHistory() {
 
   return { items, record };
 }
+
+function subscribeFavoriteTerms(cb: () => void) {
+  const handler = () => cb();
+  window.addEventListener("storage", handler);
+  window.addEventListener(FAVORITE_TERMS_EVENT, handler);
+  return () => {
+    window.removeEventListener("storage", handler);
+    window.removeEventListener(FAVORITE_TERMS_EVENT, handler);
+  };
+}
+
+function getFavoriteTermsSnapshot(): string {
+  if (typeof window === "undefined") return "[]";
+  return localStorage.getItem(FAVORITE_TERMS_KEY) ?? "[]";
+}
+
+export function useFavoriteTerms() {
+  const serialized = useSyncExternalStore(
+    subscribeFavoriteTerms,
+    getFavoriteTermsSnapshot,
+    () => "[]",
+  );
+
+  const terms = useMemo(() => {
+    try {
+      return sanitizeFavoriteTermsFromJson(serialized);
+    } catch {
+      return [] as FavoriteTerm[];
+    }
+  }, [serialized]);
+
+  const people = useMemo(() => terms.filter((term) => term.kind === "person"), [terms]);
+  const keywords = useMemo(() => terms.filter((term) => term.kind === "keyword"), [terms]);
+
+  const isFav = useCallback(
+    (kind: FavoriteTermKind, name: string) => isFavoriteTerm(terms, kind, name),
+    [terms],
+  );
+
+  const toggle = useCallback((kind: FavoriteTermKind, name: string) => {
+    saveFavoriteTerms(toggleFavoriteTerm(loadFavoriteTerms(), kind, name));
+  }, []);
+
+  return { terms, people, keywords, isFav, toggle };
+}
+
+function sanitizeFavoriteTermsFromJson(serialized: string): FavoriteTerm[] {
+  try {
+    return sanitizeFavoriteTerms(JSON.parse(serialized) as unknown);
+  } catch {
+    return [];
+  }
+}
+
