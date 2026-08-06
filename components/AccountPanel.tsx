@@ -159,7 +159,7 @@ function AccountPanelEnabled() {
       </div>
 
       <p className="text-xs text-neutral-400">
-        未ログインでも利用できます。ログインするとお気に入りが端末間で同期されます。
+        未ログインでも利用できます。ログインすると作品・人・項目のお気に入りが別ブラウザでも共有されます。
       </p>
 
       <form onSubmit={submit} className="space-y-2">

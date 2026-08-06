@@ -100,9 +100,9 @@ docker run -d --name fanza-web -p 3000:3000 \
 
 検索・詳細はサーバー側で DMM API を呼び出します。**Edge ではなく Node のサーバーレス**で動かしてください。
 
-このリポジトリは **デフォルトで同期 OFF（`NEXT_PUBLIC_ENABLE_ACCOUNT_SYNC=0`）** にしてあり、Vercel 無料枠でも安全に軽く運用できます。
+アカウント同期（`NEXT_PUBLIC_ENABLE_ACCOUNT_SYNC=1`）を使う場合は、**Vercel Blob（private）** にユーザー／お気に入り JSON を保存します（`BLOB_READ_WRITE_TOKEN`）。Docker/VPS では従来どおり `FANZA_APP_DATA_DIR` のファイル保存も使えます。
 
-ファイル保存型のログイン／同期を ON にする場合、**インスタンス間でディスクが共有されない**とデータが分散したり消えたりします。サーバーレスだけで運用する場合は DB（Supabase など）移行を推奨します。HTTPS 上ではセッション Cookie が `Secure` になります（`NODE_ENV=production`）。
+ログインすると **作品・人・項目** のお気に入りが同一アカウントで別ブラウザと共有されます。HTTPS 上ではセッション Cookie が `Secure` になります（`NODE_ENV=production`）。
 
 ### GitHub Actions
 

@@ -1,8 +1,17 @@
 # CURSOR HANDOFF
 
+## 2026-08-06 Session (account sync)
+
+- Branch `feat/sync-favorite-terms`: cross-browser favorites via login.
+  - Vercel private Blob store `fanza-user-data` + `BLOB_READ_WRITE_TOKEN`.
+  - `NEXT_PUBLIC_ENABLE_ACCOUNT_SYNC=1` on Production/Preview/Development.
+  - `lib/userStore.ts`: Blob backend when token present; file backend for Docker/local.
+  - Sync **works + people + keywords** (`/api/favorites`, `/api/favorite-terms`).
+- Prior: favorite people/keywords UI shipped on master (PR #22) → https://fanza-nine.vercel.app
+
 ## 2026-08-06 Session
 
-- Confirmed production baseline is `master` (`f6d10d4a`). Previous WIP on `cursor/http-json-search-provider` (DUGA multi-API) was stashed as `wip: duga provider on http-json branch`.
+- Confirmed production baseline is `master`. Previous WIP on `cursor/http-json-search-provider` (DUGA multi-API) was stashed as `wip: duga provider on http-json branch`.
 - Branch `feat/favorite-people-and-keywords` (from master):
   - Favorite **people** (出演者) and **keywords/項目** (ジャンル・クイック検索語) in localStorage (`lib/favorite-terms.ts`, `useFavoriteTerms`).
   - Star buttons on result cards / detail (people + genres) and on SearchBar quick chips.

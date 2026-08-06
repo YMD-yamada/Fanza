@@ -48,7 +48,7 @@ function termSearchHref(name: string): string {
 
 export function FavoritesSection() {
   const { items, toggle, capacity, isSynced } = useFavorites();
-  const { people, keywords } = useFavoriteTerms();
+  const { people, keywords, isSynced: termsSynced } = useFavoriteTerms();
   if (items.length === 0 && people.length === 0 && keywords.length === 0) return null;
 
   return (
@@ -60,7 +60,9 @@ export function FavoritesSection() {
             (作品 {items.length} / 人 {people.length} / 項目 {keywords.length})
           </span>
         </h2>
-        <span className="text-xs text-neutral-500">{isSynced ? "作品は同期中" : "この端末のみ"}</span>
+        <span className="text-xs text-neutral-500">
+          {isSynced || termsSynced ? "アカウント同期中" : "この端末のみ"}
+        </span>
       </div>
 
       {people.length > 0 && (
