@@ -1,5 +1,16 @@
 "use client";
 
+import {
+  browserSupportsWebAuthn,
+  startAuthentication,
+  startRegistration,
+} from "@simplewebauthn/browser";
+import type {
+  AuthenticationResponseJSON,
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+  RegistrationResponseJSON,
+} from "@simplewebauthn/browser";
 import { FormEvent, useEffect, useState } from "react";
 
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
@@ -7,7 +18,6 @@ import { notifyAuthChanged } from "@/lib/useStorage";
 
 type Mode = "login" | "register";
 
-const PASSWORD_MIN = 8;
 const ACCOUNT_SYNC_ENABLED = isAccountSyncEnabled();
 
 type SessionUser = {
@@ -32,13 +42,16 @@ export function AccountPanel() {
 }
 
 function AccountPanelEnabled() {
-
   const [session, setSession] = useState<SessionUser | null>(null);
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [supportsPasskey, setSupportsPasskey] = useState(true);
+
+  useEffect(() => {
+    setSupportsPasskey(browserSupportsWebAuthn());
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -47,8 +60,7 @@ function AccountPanelEnabled() {
         const response = await fetch("/api/auth/me", { cache: "no-store" });
         const data = (await response.json()) as { user?: SessionUser | null };
         if (!mounted) return;
-        const nextSession = data.user ?? null;
-        setSession(nextSession);
+        setSession(data.user ?? null);
       } catch {
         if (!mounted) return;
         setSession(null);
@@ -60,36 +72,127 @@ function AccountPanelEnabled() {
     };
   }, []);
 
-  const submit = async (event: FormEvent) => {
+  const registerWithPasskey = async (event: FormEvent) => {
     event.preventDefault();
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setMessage("メールアドレスを入力してください。");
       return;
     }
-    if (password.length < PASSWORD_MIN) {
-      setMessage(`パスワードは${PASSWORD_MIN}文字以上で入力してください。`);
+    if (!supportsPasskey) {
+      setMessage("このブラウザはパスキーに対応していません。");
       return;
     }
 
     setIsLoading(true);
     setMessage(null);
     try {
-      const endpoint = mode === "register" ? "/api/auth/register" : "/api/auth/login";
-      const response = await fetch(endpoint, {
+      const optionsRes = await fetch("/api/auth/passkey/register/options", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: trimmedEmail, password }),
+        body: JSON.stringify({ email: trimmedEmail }),
       });
-      const data = (await response.json()) as { user?: SessionUser; message?: string };
-      if (!response.ok || !data.user) {
-        setMessage(data.message ?? "ログインに失敗しました。");
+      const optionsData = (await optionsRes.json()) as {
+        options?: PublicKeyCredentialCreationOptionsJSON;
+        message?: string;
+      };
+      if (!optionsRes.ok || !optionsData.options) {
+        setMessage(optionsData.message ?? "パスキー登録の準備に失敗しました。");
         return;
       }
-      setSession(data.user);
+
+      let attestation: RegistrationResponseJSON;
+      try {
+        attestation = await startRegistration({ optionsJSON: optionsData.options });
+      } catch {
+        setMessage("パスキーの作成がキャンセルされたか、失敗しました。");
+        return;
+      }
+
+      const verifyRes = await fetch("/api/auth/passkey/register/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: trimmedEmail, response: attestation }),
+      });
+      const verifyData = (await verifyRes.json()) as {
+        user?: SessionUser;
+        message?: string;
+      };
+      if (!verifyRes.ok || !verifyData.user) {
+        setMessage(verifyData.message ?? "パスキー登録に失敗しました。");
+        return;
+      }
+
+      setSession(verifyData.user);
       notifyAuthChanged();
-      setPassword("");
-      setMessage(mode === "register" ? "アカウントを作成してログインしました。" : "ログインしました。");
+      setMessage("パスキーでアカウントを作成しました。");
+    } catch {
+      setMessage("通信エラーが発生しました。");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithPasskey = async (event?: FormEvent, discoverable = false) => {
+    event?.preventDefault();
+    const trimmedEmail = email.trim();
+    if (!discoverable && !trimmedEmail) {
+      setMessage("メールアドレスを入力するか、「保存済みパスキーで続行」を使ってください。");
+      return;
+    }
+    if (!supportsPasskey) {
+      setMessage("このブラウザはパスキーに対応していません。");
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage(null);
+    try {
+      const optionsRes = await fetch("/api/auth/passkey/login/options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(discoverable ? {} : { email: trimmedEmail }),
+      });
+      const optionsData = (await optionsRes.json()) as {
+        options?: PublicKeyCredentialRequestOptionsJSON;
+        mode?: "email" | "discoverable";
+        message?: string;
+      };
+      if (!optionsRes.ok || !optionsData.options) {
+        setMessage(optionsData.message ?? "パスキー認証の準備に失敗しました。");
+        return;
+      }
+
+      let assertion: AuthenticationResponseJSON;
+      try {
+        assertion = await startAuthentication({ optionsJSON: optionsData.options });
+      } catch {
+        setMessage("パスキー認証がキャンセルされたか、失敗しました。");
+        return;
+      }
+
+      const verifyRes = await fetch("/api/auth/passkey/login/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: discoverable ? undefined : trimmedEmail,
+          response: assertion,
+          mode: optionsData.mode ?? (discoverable ? "discoverable" : "email"),
+          challenge: optionsData.options.challenge,
+        }),
+      });
+      const verifyData = (await verifyRes.json()) as {
+        user?: SessionUser;
+        message?: string;
+      };
+      if (!verifyRes.ok || !verifyData.user) {
+        setMessage(verifyData.message ?? "パスキーログインに失敗しました。");
+        return;
+      }
+
+      setSession(verifyData.user);
+      notifyAuthChanged();
+      setMessage("パスキーでログインしました。");
     } catch {
       setMessage("通信エラーが発生しました。");
     } finally {
@@ -109,7 +212,6 @@ function AccountPanelEnabled() {
       }
       setSession(null);
       notifyAuthChanged();
-      setPassword("");
       setMessage("ログアウトしました。");
     } catch {
       setMessage("通信エラーが発生しました。");
@@ -121,7 +223,7 @@ function AccountPanelEnabled() {
   if (session) {
     return (
       <section className="space-y-2 rounded-xl border border-emerald-700/40 bg-emerald-950/30 p-3 sm:p-4">
-        <p className="text-xs text-emerald-300">ログイン中（同期ON）</p>
+        <p className="text-xs text-emerald-300">ログイン中（パスキー同期ON）</p>
         <p className="break-all text-sm font-medium text-white">{session.email}</p>
         <button
           type="button"
@@ -139,7 +241,7 @@ function AccountPanelEnabled() {
   return (
     <section className="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-white">アカウント（任意）</h2>
+        <h2 className="text-sm font-semibold text-white">アカウント（パスキー）</h2>
         <div className="flex gap-1 rounded-md bg-neutral-800 p-1 text-xs">
           <button
             type="button"
@@ -159,37 +261,48 @@ function AccountPanelEnabled() {
       </div>
 
       <p className="text-xs text-neutral-400">
-        未ログインでも利用できます。ログインすると作品・人・項目のお気に入りが別ブラウザでも共有されます。
+        パスワードは使いません。端末の生体認証やPIN（パスキー）で、別ブラウザでもお気に入りを同期できます。
       </p>
 
-      <form onSubmit={submit} className="space-y-2">
+      {!supportsPasskey && (
+        <p className="text-xs text-amber-300">
+          このブラウザはパスキー未対応です。Chrome / Edge / Safari の最新版をお使いください。
+        </p>
+      )}
+
+      <form
+        onSubmit={mode === "register" ? registerWithPasskey : (event) => void loginWithPasskey(event, false)}
+        className="space-y-2"
+      >
         <input
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="メールアドレス"
           className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-sky-500"
-          autoComplete="email"
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder={`パスワード（${PASSWORD_MIN}文字以上）`}
-          className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-sky-500"
-          autoComplete={mode === "register" ? "new-password" : "current-password"}
+          autoComplete="username webauthn"
         />
         <button
           type="submit"
-          disabled={isLoading}
-          className="rounded-md bg-sky-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={isLoading || !supportsPasskey}
+          className="w-full rounded-md bg-sky-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {mode === "register" ? "アカウント作成してログイン" : "ログイン"}
+          {mode === "register" ? "パスキーでアカウント作成" : "パスキーでログイン"}
         </button>
       </form>
+
+      {mode === "login" && (
+        <button
+          type="button"
+          disabled={isLoading || !supportsPasskey}
+          onClick={() => void loginWithPasskey(undefined, true)}
+          className="w-full rounded-md border border-neutral-600 px-3 py-2 text-xs font-medium text-neutral-200 transition-colors hover:border-sky-500/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          保存済みパスキーで続行
+        </button>
+      )}
 
       {message && <p className="text-xs text-neutral-300">{message}</p>}
     </section>
   );
 }
-

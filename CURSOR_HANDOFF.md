@@ -1,5 +1,13 @@
 # CURSOR HANDOFF
 
+## 2026-08-06 Session (passkeys)
+
+- Branch `feat/passkey-auth`: WebAuthn passkeys replace password UI for account sync.
+  - `@simplewebauthn/server` + `browser`; APIs under `/api/auth/passkey/*`.
+  - Passkeys stored in Blob/file user store; password optional for legacy accounts.
+  - AccountPanel: register/login with passkey + discoverable “保存済みパスキーで続行”.
+  - `NEXT_PUBLIC_SITE_URL=https://fanza-nine.vercel.app` set on Vercel for RP ID.
+
 ## 2026-08-06 Session (account sync)
 
 - Branch `feat/sync-favorite-terms`: cross-browser favorites via login.
