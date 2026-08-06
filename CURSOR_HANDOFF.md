@@ -117,3 +117,10 @@
   - `lib/savedItem.ts`: accept any valid source slug.
   - `.env.example` / `README.md`: how to add multiple providers + note that other shops rarely publish a public API index (contract/developer portals).
 - Validation: `npx tsc --noEmit` ok; `npm run lint` ok.
+
+## 2026-05-28 Session
+
+- Reviewed hosting / service-linking request:
+  - No Stripe Projects, hosting provider, or paid third-party service was provisioned.
+  - Current app can run on Vercel with `NEXT_PUBLIC_ENABLE_ACCOUNT_SYNC=0`; required production envs remain `DMM_API_ID` and `DMM_AFFILIATE_ID`.
+  - Recommended avoiding duplicate hosting registrations unless a concrete need appears (persistent DB/storage, auth, analytics, observability, domain/DNS, or a VPS-style Docker deployment).
