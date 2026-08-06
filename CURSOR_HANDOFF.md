@@ -1,5 +1,28 @@
 # CURSOR HANDOFF
 
+## 2026-08-06 Session
+
+- Confirmed production baseline is `master` (`f6d10d4a`). Previous WIP on `cursor/http-json-search-provider` (DUGA multi-API) was stashed as `wip: duga provider on http-json branch`.
+- Branch `feat/favorite-people-and-keywords` (from master):
+  - Favorite **people** (出演者) and **keywords/項目** (ジャンル・クイック検索語) in localStorage (`lib/favorite-terms.ts`, `useFavoriteTerms`).
+  - Star buttons on result cards / detail (people + genres) and on SearchBar quick chips.
+  - SearchBar section「お気に入りから検索」— one-tap search buttons for saved people/keywords.
+  - Home FavoritesSection lists people/keywords alongside saved works.
+  - Fixed `RecentQueriesBar` lint (`useSyncExternalStore`).
+- Validation: `npx tsc --noEmit`, `npm run lint`, `npm run build` ok.
+- Not committed/pushed/deployed yet. Restore DUGA WIP later with `git stash list` / `git stash apply` on the http-json branch if needed.
+
+## 2026-08-03 Session
+
+- Workspace moved to `C:\Users\cz7\Projects\Fanza` (Synology path unavailable).
+- Branch `cursor/http-json-search-provider`: completed multi-API wiring.
+  - Native DUGA provider (`lib/search-providers/duga-provider.ts`).
+  - Registry: FANZA + DUGA + optional `R18_PARTNER_*` / `R18_HTTP_PROVIDER_1..5_*`.
+  - `makerNames` + title/date/maker merge.
+  - DUGA credit in `ApiCredit` when configured.
+  - `.env.example` / `README.md` updated.
+- User still needs: DUGA credentials, live search check, legal review.
+
 ## 2026-05-07 Session
 
 - Added legal/compliance hardening:

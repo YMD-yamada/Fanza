@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 import { CATALOGS, isCatalogId, type CatalogId } from "@/lib/catalogs";
-import { loadRecentQueries, type RecentQuery } from "@/lib/recent-queries";
+import { MAX_RECENT, RECENT_QUERIES_KEY, type RecentQuery } from "@/lib/recent-queries";
 
 function buildHref(entry: RecentQuery): string {
   const params = new URLSearchParams();
@@ -14,23 +14,46 @@ function buildHref(entry: RecentQuery): string {
   return `/?${params.toString()}`;
 }
 
+function subscribeRecentQueries(cb: () => void) {
+  const handler = () => cb();
+  window.addEventListener("storage", handler);
+  window.addEventListener("fanza-recent-queries", handler);
+  return () => {
+    window.removeEventListener("storage", handler);
+    window.removeEventListener("fanza-recent-queries", handler);
+  };
+}
+
+function getRecentQueriesSnapshot(): string {
+  if (typeof window === "undefined") return "[]";
+  return localStorage.getItem(RECENT_QUERIES_KEY) ?? "[]";
+}
+
+function parseRecentQueries(serialized: string): RecentQuery[] {
+  try {
+    const parsed = JSON.parse(serialized) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(
+        (x): x is RecentQuery =>
+          Boolean(x) &&
+          typeof x === "object" &&
+          typeof (x as RecentQuery).q === "string" &&
+          typeof (x as RecentQuery).cat === "string",
+      )
+      .slice(0, MAX_RECENT);
+  } catch {
+    return [];
+  }
+}
+
 export function RecentQueriesBar() {
-  const [items, setItems] = useState<RecentQuery[]>([]);
-
-  const refresh = useCallback(() => {
-    setItems(loadRecentQueries());
-  }, []);
-
-  useEffect(() => {
-    refresh();
-    const onStorage = () => refresh();
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("fanza-recent-queries", onStorage);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("fanza-recent-queries", onStorage);
-    };
-  }, [refresh]);
+  const serialized = useSyncExternalStore(
+    subscribeRecentQueries,
+    getRecentQueriesSnapshot,
+    () => "[]",
+  );
+  const items = useMemo(() => parseRecentQueries(serialized), [serialized]);
 
   if (items.length === 0) return null;
 

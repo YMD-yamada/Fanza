@@ -6,6 +6,7 @@ import { itemDetailPath } from "@/lib/item-link";
 import type { NormalizedItem } from "@/lib/types";
 import { AffiliateButton } from "@/components/AffiliateButton";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { FavoriteGenreChip, FavoriteTermLink } from "@/components/FavoriteTermLink";
 import { ItemCardThumbnail } from "@/components/ItemCardThumbnail";
 
 type ItemCardProps = {
@@ -71,18 +72,17 @@ export const ItemCard = memo(function ItemCard({ item, catalog, returnTo }: Item
         </div>
 
         {item.actressNames.length > 0 && (
-          <p className="text-sm text-neutral-300">{item.actressNames.join("、")}</p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            {item.actressNames.map((name) => (
+              <FavoriteTermLink key={name} kind="person" name={name} catalog={catalog} />
+            ))}
+          </div>
         )}
 
         {item.genres.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {item.genres.slice(0, 5).map((g) => (
-              <span
-                key={g}
-                className="rounded bg-neutral-800 px-1.5 py-0.5 text-[11px] text-neutral-400"
-              >
-                {g}
-              </span>
+              <FavoriteGenreChip key={g} name={g} catalog={catalog} />
             ))}
           </div>
         )}
