@@ -10,7 +10,8 @@
   - Home FavoritesSection lists people/keywords alongside saved works.
   - Fixed `RecentQueriesBar` lint (`useSyncExternalStore`).
 - Validation: `npx tsc --noEmit`, `npm run lint`, `npm run build` ok.
-- Not committed/pushed/deployed yet. Restore DUGA WIP later with `git stash list` / `git stash apply` on the http-json branch if needed.
+- Published: PR #22 merged to `master` (`5ef03694`); Vercel production READY → https://fanza-nine.vercel.app
+- Restore DUGA WIP later with `git stash list` / `git stash apply` on `cursor/http-json-search-provider` if needed.
 
 ## 2026-08-03 Session
 
