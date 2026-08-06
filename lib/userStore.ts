@@ -2,6 +2,12 @@ import { createHash, randomBytes, scryptSync } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import { get, put } from "@vercel/blob";
+
+import {
+  type FavoriteTerm,
+  sanitizeFavoriteTerms,
+} from "@/lib/favorite-terms";
 import type { SavedItem } from "@/lib/savedItem";
 import { clampFavorites } from "@/lib/savedItem";
 
@@ -13,6 +19,7 @@ function resolveDataDir(): string {
 
 const DATA_DIR = resolveDataDir();
 const DATA_FILE = path.join(DATA_DIR, "users.json");
+const BLOB_PATH = "fanza/users.json";
 
 type StoredUser = {
   id: string;
@@ -20,6 +27,7 @@ type StoredUser = {
   passwordHash: string;
   createdAt: string;
   favorites: SavedItem[];
+  favoriteTerms: FavoriteTerm[];
 };
 
 type StoredSession = {
@@ -42,6 +50,10 @@ export type UserProfile = {
 const EMPTY_STORE: UserStoreShape = { users: [], sessions: [] };
 let writeLock: Promise<void> = Promise.resolve();
 
+function isBlobStoreEnabled(): boolean {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+}
+
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -54,6 +66,20 @@ function toProfile(user: StoredUser): UserProfile {
   return { id: user.id, email: user.email, createdAt: user.createdAt };
 }
 
+function normalizeStore(raw: Partial<UserStoreShape> | null | undefined): UserStoreShape {
+  const users = Array.isArray(raw?.users)
+    ? raw.users.map((user) => ({
+        ...user,
+        favorites: Array.isArray(user.favorites) ? user.favorites : [],
+        favoriteTerms: sanitizeFavoriteTerms(
+          Array.isArray(user.favoriteTerms) ? user.favoriteTerms : [],
+        ),
+      }))
+    : [];
+  const sessions = Array.isArray(raw?.sessions) ? raw.sessions : [];
+  return { users, sessions };
+}
+
 async function ensureDataFile() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   try {
@@ -63,23 +89,53 @@ async function ensureDataFile() {
   }
 }
 
-async function readStore(): Promise<UserStoreShape> {
+async function readStoreFromFile(): Promise<UserStoreShape> {
   await ensureDataFile();
   try {
     const raw = await fs.readFile(DATA_FILE, "utf-8");
-    const parsed = JSON.parse(raw) as Partial<UserStoreShape>;
-    const users = Array.isArray(parsed.users) ? parsed.users : [];
-    const sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
-    return { users, sessions };
+    return normalizeStore(JSON.parse(raw) as Partial<UserStoreShape>);
   } catch {
     return EMPTY_STORE;
   }
 }
 
-async function writeStore(next: UserStoreShape) {
+async function writeStoreToFile(next: UserStoreShape) {
   await ensureDataFile();
+  await fs.writeFile(DATA_FILE, JSON.stringify(next, null, 2), "utf-8");
+}
+
+async function readStoreFromBlob(): Promise<UserStoreShape> {
+  try {
+    const result = await get(BLOB_PATH, { access: "private", useCache: false });
+    if (!result) return EMPTY_STORE;
+    const text = await new Response(result.stream).text();
+    if (!text.trim()) return EMPTY_STORE;
+    return normalizeStore(JSON.parse(text) as Partial<UserStoreShape>);
+  } catch {
+    return EMPTY_STORE;
+  }
+}
+
+async function writeStoreToBlob(next: UserStoreShape) {
+  await put(BLOB_PATH, JSON.stringify(next), {
+    access: "private",
+    allowOverwrite: true,
+    addRandomSuffix: false,
+    contentType: "application/json",
+  });
+}
+
+async function readStore(): Promise<UserStoreShape> {
+  return isBlobStoreEnabled() ? readStoreFromBlob() : readStoreFromFile();
+}
+
+async function writeStore(next: UserStoreShape) {
   writeLock = writeLock.then(async () => {
-    await fs.writeFile(DATA_FILE, JSON.stringify(next, null, 2), "utf-8");
+    if (isBlobStoreEnabled()) {
+      await writeStoreToBlob(next);
+    } else {
+      await writeStoreToFile(next);
+    }
   });
   await writeLock;
 }
@@ -111,6 +167,7 @@ export async function createStoredUser(
     passwordHash,
     createdAt: new Date().toISOString(),
     favorites: [],
+    favoriteTerms: [],
   };
   store.users.unshift(user);
   await writeStore(store);
@@ -188,6 +245,24 @@ export async function setUserFavorites(userId: string, favorites: SavedItem[]): 
   const user = store.users.find((u) => u.id === userId);
   if (!user) return false;
   user.favorites = clampFavorites(favorites);
+  await writeStore(store);
+  return true;
+}
+
+export async function getUserFavoriteTerms(userId: string): Promise<FavoriteTerm[]> {
+  const store = await readStore();
+  const user = store.users.find((u) => u.id === userId);
+  return sanitizeFavoriteTerms(user?.favoriteTerms ?? []);
+}
+
+export async function setUserFavoriteTerms(
+  userId: string,
+  terms: FavoriteTerm[],
+): Promise<boolean> {
+  const store = await readStore();
+  const user = store.users.find((u) => u.id === userId);
+  if (!user) return false;
+  user.favoriteTerms = sanitizeFavoriteTerms(terms);
   await writeStore(store);
   return true;
 }

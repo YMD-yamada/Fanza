@@ -8,7 +8,6 @@ import {
   type FavoriteTerm,
   type FavoriteTermKind,
   isFavoriteTerm,
-  loadFavoriteTerms,
   sanitizeFavoriteTerms,
   saveFavoriteTerms,
   toggleFavoriteTerm,
@@ -309,20 +308,89 @@ function getFavoriteTermsSnapshot(): string {
   return localStorage.getItem(FAVORITE_TERMS_KEY) ?? "[]";
 }
 
+const TERMS_SYNC_MARKER = "fanza_favorite_terms_synced_user";
+
+function notifyFavoriteTermsChanged() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(FAVORITE_TERMS_EVENT));
+}
+
 export function useFavoriteTerms() {
-  const serialized = useSyncExternalStore(
+  const localSerialized = useSyncExternalStore(
     subscribeFavoriteTerms,
     getFavoriteTermsSnapshot,
     () => "[]",
   );
+  const localTerms = useMemo(() => sanitizeFavoriteTermsFromJson(localSerialized), [localSerialized]);
+
+  const { status, user } = useAuthState();
+  const [remoteTerms, setRemoteTerms] = useState<FavoriteTerm[]>([]);
+  const [remoteLoaded, setRemoteLoaded] = useState(false);
+
+  const refreshRemote = useCallback(async () => {
+    if (!ACCOUNT_SYNC_ENABLED || !user) {
+      setRemoteTerms([]);
+      setRemoteLoaded(false);
+      return;
+    }
+    try {
+      const response = await fetch("/api/favorite-terms", { cache: "no-store" });
+      if (!response.ok) return;
+      const data = (await response.json()) as { terms?: unknown };
+      setRemoteTerms(sanitizeFavoriteTerms(data.terms));
+      setRemoteLoaded(true);
+    } catch {
+      // Keep local fallback on network errors.
+    }
+  }, [user]);
+
+  useEffect(() => {
+    setTimeout(() => {
+      if (!ACCOUNT_SYNC_ENABLED || status !== "authenticated" || !user) {
+        setRemoteLoaded(false);
+        setRemoteTerms([]);
+        return;
+      }
+      void refreshRemote();
+    }, 0);
+  }, [refreshRemote, status, user]);
+
+  useEffect(() => subscribeEvent(FAVORITE_TERMS_EVENT, () => void refreshRemote()), [refreshRemote]);
+
+  useEffect(() => {
+    if (!ACCOUNT_SYNC_ENABLED || !user) return;
+    const marker = localStorage.getItem(TERMS_SYNC_MARKER);
+    if (marker === user.id) return;
+
+    const local = sanitizeFavoriteTerms(localTerms);
+    if (local.length === 0) {
+      localStorage.setItem(TERMS_SYNC_MARKER, user.id);
+      return;
+    }
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/favorite-terms", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ terms: local }),
+        });
+        if (response.ok) {
+          localStorage.setItem(TERMS_SYNC_MARKER, user.id);
+          await refreshRemote();
+        }
+      } catch {
+        // Keep local fallback on sync errors.
+      }
+    })();
+  }, [localTerms, refreshRemote, user]);
 
   const terms = useMemo(() => {
-    try {
-      return sanitizeFavoriteTermsFromJson(serialized);
-    } catch {
-      return [] as FavoriteTerm[];
+    if (status === "authenticated" && user && remoteLoaded) {
+      return remoteTerms;
     }
-  }, [serialized]);
+    return localTerms;
+  }, [localTerms, remoteLoaded, remoteTerms, status, user]);
 
   const people = useMemo(() => terms.filter((term) => term.kind === "person"), [terms]);
   const keywords = useMemo(() => terms.filter((term) => term.kind === "keyword"), [terms]);
@@ -332,11 +400,47 @@ export function useFavoriteTerms() {
     [terms],
   );
 
-  const toggle = useCallback((kind: FavoriteTermKind, name: string) => {
-    saveFavoriteTerms(toggleFavoriteTerm(loadFavoriteTerms(), kind, name));
-  }, []);
+  const saveRemote = useCallback(
+    async (next: FavoriteTerm[]) => {
+      if (!ACCOUNT_SYNC_ENABLED || !(status === "authenticated" && user)) return;
+      try {
+        const response = await fetch("/api/favorite-terms", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ terms: next }),
+        });
+        if (!response.ok) return;
+        const data = (await response.json()) as { terms?: unknown };
+        setRemoteTerms(sanitizeFavoriteTerms(data.terms));
+        notifyFavoriteTermsChanged();
+      } catch {
+        // Keep local fallback on save errors.
+      }
+    },
+    [status, user],
+  );
 
-  return { terms, people, keywords, isFav, toggle };
+  const toggle = useCallback(
+    (kind: FavoriteTermKind, name: string) => {
+      const next = toggleFavoriteTerm(terms, kind, name);
+      saveFavoriteTerms(next);
+      if (ACCOUNT_SYNC_ENABLED && status === "authenticated" && user) {
+        void saveRemote(next);
+      } else {
+        notifyFavoriteTermsChanged();
+      }
+    },
+    [saveRemote, status, terms, user],
+  );
+
+  return {
+    terms,
+    people,
+    keywords,
+    isFav,
+    toggle,
+    isSynced: ACCOUNT_SYNC_ENABLED && status === "authenticated" && Boolean(user),
+  };
 }
 
 function sanitizeFavoriteTermsFromJson(serialized: string): FavoriteTerm[] {
