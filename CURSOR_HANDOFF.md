@@ -2,12 +2,13 @@
 
 ## 2026-08-07 Session (auth UX recovery)
 
-- Branch `feat/auth-header-and-recovery`:
+- Branch `feat/auth-header-and-recovery` → PR #26 merged to `master` (`d5929ed8`); production READY → https://fanza-nine.vercel.app
   - Mid-page AccountPanel removed; header top-right `AccountMenu` (guest OK without login).
   - Email methods hint (`/api/auth/methods`); 409/401 explain password vs passkey.
   - Password forgot/reset (`/api/auth/password/*`, `/reset-password`); optional Resend email.
   - Logged-in: set password + add passkey (`/api/auth/passkey/add/*`).
   - Recovery without Resend: passkey login → set password in menu.
+  - Human optional: set `RESEND_API_KEY` + `AUTH_EMAIL_FROM` for email password reset.
 
 ## 2026-08-07 Session (password + passkey)
 
