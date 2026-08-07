@@ -31,6 +31,8 @@ type SessionUser = {
   id: string;
   email: string;
   createdAt: string;
+  hasPassword?: boolean;
+  hasPasskey?: boolean;
 };
 
 export function AccountMenu() {
@@ -45,6 +47,7 @@ function AccountMenuEnabled() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [methods, setMethods] = useState<AuthMethods | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -63,6 +66,13 @@ function AccountMenuEnabled() {
         const data = (await response.json()) as { user?: SessionUser | null };
         if (!mounted) return;
         setSession(data.user ?? null);
+        if (data.user) {
+          setMethods({
+            exists: true,
+            hasPassword: Boolean(data.user.hasPassword),
+            hasPasskey: Boolean(data.user.hasPasskey),
+          });
+        }
       } catch {
         if (!mounted) return;
         setSession(null);
@@ -365,7 +375,51 @@ function AccountMenuEnabled() {
         return;
       }
       setNewPassword("");
-      setMessage(data.message ?? "パスワードを設定しました。");
+      setMethods((prev) => ({
+        exists: true,
+        hasPassword: true,
+        hasPasskey: prev?.hasPasskey ?? false,
+      }));
+      setSession((prev) => (prev ? { ...prev, hasPassword: true } : prev));
+      setMessage(data.message ?? "パスワードを設定しました。パスキーをやめたい場合は下から削除できます。");
+    } catch {
+      setMessage("通信エラーが発生しました。");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const removeAllPasskeys = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!confirmPassword) {
+      setMessage("本人確認のため、現在のパスワードを入力してください。");
+      return;
+    }
+    setIsLoading(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/auth/passkey/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: confirmPassword }),
+      });
+      const data = (await response.json()) as {
+        message?: string;
+        hasPassword?: boolean;
+        hasPasskey?: boolean;
+      };
+      if (!response.ok) {
+        setMessage(data.message ?? "パスキーの削除に失敗しました。");
+        return;
+      }
+      setConfirmPassword("");
+      setMethods({
+        exists: true,
+        hasPassword: true,
+        hasPasskey: false,
+      });
+      setSession((prev) => (prev ? { ...prev, hasPassword: true, hasPasskey: false } : prev));
+      setMessage(data.message ?? "パスキーを削除しました。");
     } catch {
       setMessage("通信エラーが発生しました。");
     } finally {
@@ -407,6 +461,12 @@ function AccountMenuEnabled() {
         setMessage(verifyData.message ?? "パスキー追加に失敗しました。");
         return;
       }
+      setMethods((prev) => ({
+        exists: true,
+        hasPassword: prev?.hasPassword ?? false,
+        hasPasskey: true,
+      }));
+      setSession((prev) => (prev ? { ...prev, hasPasskey: true } : prev));
       setMessage(verifyData.message ?? "パスキーを追加しました。");
     } catch {
       setMessage("通信エラーが発生しました。");
@@ -426,9 +486,11 @@ function AccountMenuEnabled() {
         return;
       }
       setSession(null);
+      setMethods(null);
       notifyAuthChanged();
       setPassword("");
       setNewPassword("");
+      setConfirmPassword("");
       setMessage("ログアウトしました。");
     } catch {
       setMessage("通信エラーが発生しました。");
@@ -466,6 +528,12 @@ function AccountMenuEnabled() {
               <div>
                 <p className="text-[11px] text-emerald-300">ログイン中 · お気に入り同期ON</p>
                 <p className="mt-1 break-all text-sm font-medium text-white">{session.email}</p>
+                <p className="mt-1 text-[11px] text-neutral-500">
+                  認証:
+                  {methods?.hasPassword ? " パスワードあり" : " パスワードなし"}
+                  {" / "}
+                  {methods?.hasPasskey ? "パスキーあり" : "パスキーなし"}
+                </p>
               </div>
               <form onSubmit={setPasswordWhileLoggedIn} className="space-y-2">
                 <p className="text-[11px] text-neutral-500">パスワードを設定／更新</p>
@@ -485,7 +553,38 @@ function AccountMenuEnabled() {
                   パスワードを保存
                 </button>
               </form>
-              {supportsPasskey && (
+              {methods?.hasPasskey && (
+                <form
+                  onSubmit={removeAllPasskeys}
+                  className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2"
+                >
+                  <p className="text-[11px] text-amber-100/90">
+                    {methods.hasPassword
+                      ? "パスキーをやめてパスワードのみにする"
+                      : "パスキーを削除するには、先に上でパスワードを設定してください"}
+                  </p>
+                  {methods.hasPassword && (
+                    <>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        placeholder="本人確認用の現在のパスワード"
+                        className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-sky-500"
+                        autoComplete="current-password"
+                      />
+                      <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full rounded-md border border-amber-500/50 px-3 py-2 text-xs text-amber-100 hover:bg-amber-500/10 disabled:opacity-50"
+                      >
+                        パスキーをすべて削除
+                      </button>
+                    </>
+                  )}
+                </form>
+              )}
+              {supportsPasskey && !methods?.hasPasskey && (
                 <button
                   type="button"
                   disabled={isLoading}
@@ -493,6 +592,16 @@ function AccountMenuEnabled() {
                   className="w-full rounded-md border border-neutral-600 px-3 py-2 text-xs text-neutral-200 hover:border-sky-500/50 disabled:opacity-50"
                 >
                   この端末にパスキーを追加
+                </button>
+              )}
+              {supportsPasskey && methods?.hasPasskey && (
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => void addPasskeyWhileLoggedIn()}
+                  className="w-full rounded-md border border-neutral-700 px-3 py-2 text-xs text-neutral-400 hover:text-white disabled:opacity-50"
+                >
+                  別のパスキーを追加
                 </button>
               )}
               <button
