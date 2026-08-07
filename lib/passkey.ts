@@ -22,31 +22,43 @@ export type RelyingPartyConfig = {
   rpID: string;
   rpName: string;
   origin: string;
+  /** Origins accepted during verification (aliases / configured site URL). */
+  origins: string[];
 };
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
-export function getRelyingPartyConfig(request: Request): RelyingPartyConfig {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (configured && configured.length > 0) {
-    const url = new URL(configured);
-    return {
-      rpID: url.hostname,
-      rpName: "Fanza Search Navigator",
-      origin: url.origin,
-    };
-  }
-
-  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-  const host = forwardedHost || request.headers.get("host") || new URL(request.url).host;
+function originFromHost(host: string, protoHint?: string | null): string {
   const proto =
-    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
-    (host.includes("localhost") ? "http" : "https");
-  const origin = `${proto}://${host}`;
+    protoHint?.split(",")[0]?.trim() ||
+    (host.includes("localhost") || host.startsWith("127.") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
+/**
+ * Prefer the request Host so browser origin and RP ID always match the URL the user opened.
+ * Also accept NEXT_PUBLIC_SITE_URL as an alternate allowed origin during verification.
+ */
+export function getRelyingPartyConfig(request: Request): RelyingPartyConfig {
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const hostHeader = request.headers.get("host");
+  const host = forwardedHost || hostHeader || new URL(request.url).host;
+  const proto = request.headers.get("x-forwarded-proto");
+  const requestOrigin = originFromHost(host, proto);
+
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  const configuredOrigin =
+    configured && configured.length > 0 ? new URL(configured).origin : null;
+
+  const origins = Array.from(
+    new Set([requestOrigin, configuredOrigin].filter((value): value is string => Boolean(value))),
+  );
+
   return {
-    rpID: new URL(origin).hostname,
+    rpID: new URL(requestOrigin).hostname,
     rpName: "Fanza Search Navigator",
-    origin,
+    origin: requestOrigin,
+    origins,
   };
 }
 

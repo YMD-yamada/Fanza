@@ -1,5 +1,11 @@
 # CURSOR HANDOFF
 
+## 2026-08-07 Session (password + passkey)
+
+- Branch `feat/password-and-passkey-auth`: restore password register/login as primary path; keep passkey as optional alternate.
+- WebAuthn RP uses request Host (not only SITE_URL) so origin matches the URL opened; verify accepts both origins.
+- Clearer passkey error messages suggesting password fallback.
+
 ## 2026-08-06 Session (passkeys)
 
 - Branch `feat/passkey-auth`: WebAuthn passkeys replace password UI for account sync.

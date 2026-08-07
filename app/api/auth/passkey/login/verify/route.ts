@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     verification = await verifyAuthenticationResponse({
       response: body.response,
       expectedChallenge: challenge.challenge,
-      expectedOrigin: rp.origin,
+      expectedOrigin: rp.origins,
       expectedRPID: rp.rpID,
       requireUserVerification: false,
       credential: {
