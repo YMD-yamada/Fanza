@@ -2,7 +2,9 @@
 
 ## 2026-08-08 Session (remove passkeys)
 
-- Branch `feat/remove-passkeys-for-password-only`: logged-in users can clear all passkeys after setting a password (password confirmation required). API `POST /api/auth/passkey/remove`; `/api/auth/me` returns `hasPassword`/`hasPasskey`.
+- Branch `feat/remove-passkeys-for-password-only` → PR #27 merged (`a777383f`); production → https://fanza-nine.vercel.app
+  - Logged-in users can clear all passkeys after setting a password (password confirmation required).
+  - API `POST /api/auth/passkey/remove`; `/api/auth/me` returns `hasPassword`/`hasPasskey`.
 
 ## 2026-08-07 Session (auth UX recovery)
 
