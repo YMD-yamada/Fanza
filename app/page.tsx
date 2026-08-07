@@ -1,4 +1,3 @@
-import { AccountPanel } from "@/components/AccountPanel";
 import { CatalogTabs } from "@/components/CatalogTabs";
 import { RecentQueriesBar } from "@/components/RecentQueriesBar";
 import { FavoritesSection, HistorySection } from "@/components/SavedSection";
@@ -89,7 +88,6 @@ export default async function Home({ searchParams }: HomeProps) {
         )}
       </section>
 
-      <AccountPanel />
       <CatalogTabs active={catalog} tabParams={tabParams} />
       <SearchBar key={`searchbar-${catalog}`} />
 

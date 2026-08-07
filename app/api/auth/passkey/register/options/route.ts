@@ -11,7 +11,7 @@ import {
   isValidEmail,
 } from "@/lib/passkey";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
-import { findUserByEmail, saveWebAuthnChallenge } from "@/lib/userStore";
+import { findUserByEmail, getAuthMethods, saveWebAuthnChallenge } from "@/lib/userStore";
 
 export async function POST(request: NextRequest) {
   if (!isAccountSyncEnabled()) {
@@ -31,7 +31,18 @@ export async function POST(request: NextRequest) {
 
     const existing = await findUserByEmail(email);
     if (existing) {
-      return NextResponse.json({ message: "このメールアドレスは既に登録されています。" }, { status: 409 });
+      const methods = await getAuthMethods(email);
+      return NextResponse.json(
+        {
+          message: methods.hasPassword
+            ? "このメールアドレスは既に登録されています。パスワードでログインしてください。"
+            : "このメールアドレスは既に登録されています。パスキーでログインしてください。",
+          exists: true,
+          hasPassword: methods.hasPassword,
+          hasPasskey: methods.hasPasskey,
+        },
+        { status: 409 },
+      );
     }
 
     const rp = getRelyingPartyConfig(request);
