@@ -47,6 +47,14 @@ type UserStoreShape = {
   users: StoredUser[];
   sessions: StoredSession[];
   webauthnChallenges: WebAuthnChallengeRecord[];
+  passwordResetTokens: PasswordResetToken[];
+};
+
+type PasswordResetToken = {
+  tokenHash: string;
+  userId: string;
+  email: string;
+  expiresAt: string;
 };
 
 export type UserProfile = {
@@ -55,7 +63,12 @@ export type UserProfile = {
   createdAt: string;
 };
 
-const EMPTY_STORE: UserStoreShape = { users: [], sessions: [], webauthnChallenges: [] };
+const EMPTY_STORE: UserStoreShape = {
+  users: [],
+  sessions: [],
+  webauthnChallenges: [],
+  passwordResetTokens: [],
+};
 let writeLock: Promise<void> = Promise.resolve();
 
 function isBlobStoreEnabled(): boolean {
@@ -123,7 +136,17 @@ function normalizeStore(raw: Partial<UserStoreShape> | null | undefined): UserSt
           (item.type === "registration" || item.type === "authentication"),
       )
     : [];
-  return { users, sessions, webauthnChallenges };
+  const passwordResetTokens = Array.isArray(raw?.passwordResetTokens)
+    ? raw.passwordResetTokens.filter(
+        (item) =>
+          item &&
+          typeof item.tokenHash === "string" &&
+          typeof item.userId === "string" &&
+          typeof item.email === "string" &&
+          typeof item.expiresAt === "string",
+      )
+    : [];
+  return { users, sessions, webauthnChallenges, passwordResetTokens };
 }
 
 async function ensureDataFile() {
@@ -369,6 +392,76 @@ export async function updatePasskeyCounter(
   passkey.counter = counter;
   await writeStore(store);
   return true;
+}
+
+export type AuthMethods = {
+  exists: boolean;
+  hasPassword: boolean;
+  hasPasskey: boolean;
+};
+
+export async function getAuthMethods(email: string): Promise<AuthMethods> {
+  const user = await findUserByEmail(email);
+  if (!user) return { exists: false, hasPassword: false, hasPasskey: false };
+  return {
+    exists: true,
+    hasPassword: Boolean(user.passwordHash),
+    hasPasskey: user.passkeys.length > 0,
+  };
+}
+
+export async function setUserPasswordHash(
+  userId: string,
+  passwordHash: string,
+): Promise<boolean> {
+  const store = await readStore();
+  const user = store.users.find((u) => u.id === userId);
+  if (!user) return false;
+  user.passwordHash = passwordHash;
+  await writeStore(store);
+  return true;
+}
+
+export async function createPasswordResetToken(
+  email: string,
+): Promise<{ token: string; userId: string } | null> {
+  const normalizedEmail = normalizeEmail(email);
+  const store = await readStore();
+  const user = store.users.find((u) => u.email === normalizedEmail);
+  if (!user) return null;
+
+  const token = randomBytes(32).toString("hex");
+  const now = Date.now();
+  store.passwordResetTokens = store.passwordResetTokens.filter(
+    (item) => item.email !== normalizedEmail && new Date(item.expiresAt).getTime() > now,
+  );
+  store.passwordResetTokens.push({
+    tokenHash: hashToken(token),
+    userId: user.id,
+    email: normalizedEmail,
+    expiresAt: new Date(now + 60 * 60 * 1000).toISOString(),
+  });
+  await writeStore(store);
+  return { token, userId: user.id };
+}
+
+export async function consumePasswordResetToken(
+  token: string,
+): Promise<{ userId: string; email: string } | null> {
+  const store = await readStore();
+  const now = Date.now();
+  store.passwordResetTokens = store.passwordResetTokens.filter(
+    (item) => new Date(item.expiresAt).getTime() > now,
+  );
+  const tokenHash = hashToken(token);
+  const index = store.passwordResetTokens.findIndex((item) => item.tokenHash === tokenHash);
+  if (index < 0) {
+    await writeStore(store);
+    return null;
+  }
+  const [record] = store.passwordResetTokens.splice(index, 1);
+  await writeStore(store);
+  return record ? { userId: record.userId, email: record.email } : null;
 }
 
 export async function createStoredSession(

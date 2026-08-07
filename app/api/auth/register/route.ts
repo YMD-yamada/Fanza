@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createPasswordHash, createUserSession, getCurrentUser } from "@/lib/auth";
 import { validateAuthPayload } from "@/lib/authShared";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
-import { createStoredUser } from "@/lib/userStore";
+import { createStoredUser, getAuthMethods } from "@/lib/userStore";
 
 export async function POST(request: NextRequest) {
   if (!isAccountSyncEnabled()) {
@@ -26,11 +26,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const methods = await getAuthMethods(validation.email);
+  if (methods.exists) {
+    return NextResponse.json(
+      {
+        message: "このメールアドレスは既に登録されています。ログインしてください。",
+        exists: true,
+        hasPassword: methods.hasPassword,
+        hasPasskey: methods.hasPasskey,
+      },
+      { status: 409 },
+    );
+  }
+
   const passwordHash = createPasswordHash(validation.password);
   const created = await createStoredUser(validation.email, passwordHash);
   if (!created.ok) {
+    const again = await getAuthMethods(validation.email);
     return NextResponse.json(
-      { message: "このメールアドレスは既に登録されています。" },
+      {
+        message: "このメールアドレスは既に登録されています。ログインしてください。",
+        exists: true,
+        hasPassword: again.hasPassword,
+        hasPasskey: again.hasPasskey,
+      },
       { status: 409 },
     );
   }
