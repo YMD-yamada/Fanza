@@ -1,5 +1,9 @@
 # CURSOR HANDOFF
 
+## 2026-08-08 Session (remove passkeys)
+
+- Branch `feat/remove-passkeys-for-password-only`: logged-in users can clear all passkeys after setting a password (password confirmation required). API `POST /api/auth/passkey/remove`; `/api/auth/me` returns `hasPassword`/`hasPasskey`.
+
 ## 2026-08-07 Session (auth UX recovery)
 
 - Branch `feat/auth-header-and-recovery` → PR #26 merged to `master` (`d5929ed8`); production READY → https://fanza-nine.vercel.app

@@ -379,6 +379,22 @@ export async function addPasskeyToUser(
   return true;
 }
 
+export async function clearAllPasskeysForUser(
+  userId: string,
+): Promise<{ ok: boolean; cleared: number; hasPassword: boolean }> {
+  const store = await readStore();
+  const user = store.users.find((u) => u.id === userId);
+  if (!user) return { ok: false, cleared: 0, hasPassword: false };
+  const hasPassword = Boolean(user.passwordHash);
+  if (!hasPassword) {
+    return { ok: false, cleared: 0, hasPassword: false };
+  }
+  const cleared = user.passkeys.length;
+  user.passkeys = [];
+  await writeStore(store);
+  return { ok: true, cleared, hasPassword: true };
+}
+
 export async function updatePasskeyCounter(
   userId: string,
   credentialId: string,
@@ -402,6 +418,17 @@ export type AuthMethods = {
 
 export async function getAuthMethods(email: string): Promise<AuthMethods> {
   const user = await findUserByEmail(email);
+  if (!user) return { exists: false, hasPassword: false, hasPasskey: false };
+  return {
+    exists: true,
+    hasPassword: Boolean(user.passwordHash),
+    hasPasskey: user.passkeys.length > 0,
+  };
+}
+
+export async function getAuthMethodsByUserId(userId: string): Promise<AuthMethods> {
+  const store = await readStore();
+  const user = store.users.find((u) => u.id === userId);
   if (!user) return { exists: false, hasPassword: false, hasPasskey: false };
   return {
     exists: true,
