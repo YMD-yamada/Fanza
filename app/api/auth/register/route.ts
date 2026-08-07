@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   const currentUser = await getCurrentUser();
   if (currentUser) {
     return NextResponse.json(
-      { message: "You are already logged in." },
+      { message: "すでにログインしています。" },
       { status: 400 },
     );
   }
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   const created = await createStoredUser(validation.email, passwordHash);
   if (!created.ok) {
     return NextResponse.json(
-      { message: "This email is already registered." },
+      { message: "このメールアドレスは既に登録されています。" },
       { status: 409 },
     );
   }

@@ -44,12 +44,16 @@ export async function POST(request: NextRequest) {
     verification = await verifyRegistrationResponse({
       response: body.response,
       expectedChallenge: challenge.challenge,
-      expectedOrigin: rp.origin,
+      expectedOrigin: rp.origins,
       expectedRPID: rp.rpID,
       requireUserVerification: false,
     });
-  } catch {
-    return NextResponse.json({ message: "パスキーの検証に失敗しました。" }, { status: 400 });
+  } catch (error) {
+    console.error("[passkey/register/verify]", error);
+    return NextResponse.json(
+      { message: "パスキーの検証に失敗しました。パスワードで登録してください。" },
+      { status: 400 },
+    );
   }
 
   if (!verification.verified || !verification.registrationInfo) {
