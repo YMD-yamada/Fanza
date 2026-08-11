@@ -139,3 +139,20 @@
   - `lib/savedItem.ts`: accept any valid source slug.
   - `.env.example` / `README.md`: how to add multiple providers + note that other shops rarely publish a public API index (contract/developer portals).
 - Validation: `npx tsc --noEmit` ok; `npm run lint` ok.
+
+## 2026-06-19 Session
+
+- Consultation only: answered whether existing Cursor-managed apps can be carried over to Claude Code, and whether Claude Code can work with GitHub and Vercel.
+- No application code changes were made.
+
+## 2026-06-20 Session
+
+- Added Claude Code migration support:
+  - `CLAUDE.md`: expanded from an `AGENTS.md` pointer into project overview, commands, environment/deployment notes, handoff rules, and 3D printing boundaries.
+  - `docs/claude-code-migration.md`: Japanese migration checklist for Cursor -> Claude Code, GitHub/Vercel setup, and 3D printer data creation workflow.
+- No application runtime code changed.
+
+## 2026-06-20 Cursor chat-only note
+
+- Added `docs/cursor-chat-only.md`: simple Japanese procedure for using Cursor like a normal AI chat without opening a project directory, including Ask-mode workflow, fallback sandbox folder guidance, and safety settings.
+- No application runtime code changed.
