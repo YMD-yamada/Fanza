@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { isValidEmail, sanitizeEmail } from "@/lib/authShared";
-import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
+import { isAccountSyncEnabled, isPasswordResetEmailConfigured } from "@/lib/runtimeConfig";
 import { createPasswordResetToken, getAuthMethods } from "@/lib/userStore";
 
 const GENERIC_MESSAGE =
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
   const builtResetUrl = created
     ? `${siteBase(request)}/reset-password?token=${created.token}`
     : null;
-  const mailConfigured = Boolean(process.env.RESEND_API_KEY?.trim() && process.env.AUTH_EMAIL_FROM?.trim());
+  const mailConfigured = isPasswordResetEmailConfigured();
   let emailed = false;
   if (builtResetUrl && mailConfigured) {
     emailed = await maybeSendResetEmail(email, builtResetUrl);

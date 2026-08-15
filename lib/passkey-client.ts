@@ -9,9 +9,9 @@ const SAME_ORIGIN: RequestInit = { credentials: "same-origin" };
 export function explainPasskeyFailure(error: unknown): string {
   const name = error && typeof error === "object" && "name" in error ? String(error.name) : "";
   if (name === "NotAllowedError" || name === "AbortError" || name === "InvalidStateError") {
-    return "この端末に使えるパスキーがありません。メールでパスワードを設定してください。";
+    return "この端末に使えるパスキーがありません。パスワードを設定して入ってください。";
   }
-  return "パスキー認証がキャンセルされたか失敗しました。この端末に無い場合はメールでパスワードを設定してください。";
+  return "パスキー認証がキャンセルされたか失敗しました。この端末に無い場合はパスワードを設定して入ってください。";
 }
 
 export async function authenticateWithPasskey(

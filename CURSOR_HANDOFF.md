@@ -13,6 +13,7 @@
 ## 2026-08-15 Session (passkey-only recovery)
 
 - Passkey-only 既存口座が iPad 等で入れない: 新規 409 でログインへ切替、メールでパスワード設定を主導線、パスキー失敗時は「この端末に無い」と案内。
+- 本番は再設定メール未設定のため、パスキーのみ口座は `POST /api/auth/password/claim-legacy` で今のパスワードを足して入れる（Resend があるときはメール必須）。
 
 ## 2026-08-08 Session (remove passkeys)
 

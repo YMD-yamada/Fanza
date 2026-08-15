@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createPasswordHash, createUserSession, getCurrentUser } from "@/lib/auth";
+import { passkeyRecoveryFlags } from "@/lib/authRecovery";
 import { validateAuthPayload } from "@/lib/authShared";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 import { createStoredUser, getAuthMethods } from "@/lib/userStore";
@@ -31,14 +32,17 @@ export async function POST(request: NextRequest) {
 
   const methods = await getAuthMethods(validation.email);
   if (methods.exists) {
+    const flags = passkeyRecoveryFlags(methods);
     return NextResponse.json(
       {
         error: "このメールアドレスは既に登録されています。ログインしてください。",
-        message: "このメールアドレスは既に登録されています。ログインしてください。",
+        message: flags.canClaimPassword
+          ? "すでに登録済みです。パスワード未設定なので、ログイン画面でパスワードを設定して入れます。"
+          : "このメールアドレスは既に登録されています。ログインしてください。",
         exists: true,
         hasPassword: methods.hasPassword,
         hasPasskey: methods.hasPasskey,
-        canPasskey: methods.hasPasskey && !methods.hasPassword,
+        ...flags,
       },
       { status: 409 },
     );
@@ -48,14 +52,17 @@ export async function POST(request: NextRequest) {
   const created = await createStoredUser(validation.email, passwordHash);
   if (!created.ok) {
     const again = await getAuthMethods(validation.email);
+    const flags = passkeyRecoveryFlags(again);
     return NextResponse.json(
       {
         error: "このメールアドレスは既に登録されています。ログインしてください。",
-        message: "このメールアドレスは既に登録されています。ログインしてください。",
+        message: flags.canClaimPassword
+          ? "すでに登録済みです。パスワード未設定なので、ログイン画面でパスワードを設定して入れます。"
+          : "このメールアドレスは既に登録されています。ログインしてください。",
         exists: true,
         hasPassword: again.hasPassword,
         hasPasskey: again.hasPasskey,
-        canPasskey: again.hasPasskey && !again.hasPassword,
+        ...flags,
       },
       { status: 409 },
     );

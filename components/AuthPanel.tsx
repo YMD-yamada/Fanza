@@ -5,6 +5,13 @@ import { authenticateWithPasskey } from "@/lib/passkey-client";
 
 type AuthMode = "login" | "register";
 
+type AuthPayload = {
+  error?: string;
+  message?: string;
+  canPasskey?: boolean;
+  canClaimPassword?: boolean;
+};
+
 function readErrorMessage(payload: unknown, fallback: string): string {
   if (!payload || typeof payload !== "object") return fallback;
   const record = payload as { error?: unknown; message?: unknown };
@@ -19,12 +26,42 @@ export function AuthPanel() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [canPasskey, setCanPasskey] = useState(false);
+  const [canClaimPassword, setCanClaimPassword] = useState(false);
+
+  const applyRecoveryFlags = useCallback((payload: AuthPayload | null) => {
+    setCanPasskey(Boolean(payload?.canPasskey));
+    setCanClaimPassword(Boolean(payload?.canClaimPassword));
+  }, []);
+
+  const claimLegacy = useCallback(async () => {
+    const response = await fetch("/api/auth/password/claim-legacy", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const payload = (await response.json().catch(() => null)) as AuthPayload | null;
+    if (!response.ok) {
+      applyRecoveryFlags(payload);
+      setMessage(readErrorMessage(payload, "パスワードの設定に失敗しました"));
+      return false;
+    }
+    window.location.assign("/");
+    return true;
+  }, [applyRecoveryFlags, email, password]);
 
   const submit = useCallback(async () => {
     setBusy(true);
     setMessage(null);
-    if (mode === "register") setCanPasskey(false);
+    if (mode === "register") {
+      setCanPasskey(false);
+      setCanClaimPassword(false);
+    }
     try {
+      if (mode === "login" && canClaimPassword) {
+        await claimLegacy();
+        return;
+      }
       const path = mode === "register" ? "/api/auth/register" : "/api/auth/login";
       const response = await fetch(path, {
         method: "POST",
@@ -32,23 +69,20 @@ export function AuthPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const payload = (await response.json().catch(() => null)) as {
-        error?: string;
-        message?: string;
-        canPasskey?: boolean;
-      } | null;
+      const payload = (await response.json().catch(() => null)) as AuthPayload | null;
       if (response.status === 409) {
         setMode("login");
-        setCanPasskey(Boolean(payload?.canPasskey));
+        applyRecoveryFlags(payload);
         setMessage(
-          payload?.canPasskey
-            ? "すでに登録済みです。パスワード未設定なので、メールでパスワードを設定するか、パスキーが残っている端末から入ってください。"
-            : "すでに登録済みです。ログインしてください。",
+          payload?.message ??
+            (payload?.canClaimPassword
+              ? "すでに登録済みです。パスワード未設定なので、今のパスワードを設定して入れます。"
+              : "すでに登録済みです。ログインしてください。"),
         );
         return;
       }
       if (!response.ok) {
-        setCanPasskey(Boolean(payload?.canPasskey));
+        applyRecoveryFlags(payload);
         setMessage(readErrorMessage(payload, "認証に失敗しました"));
         return;
       }
@@ -58,7 +92,7 @@ export function AuthPanel() {
     } finally {
       setBusy(false);
     }
-  }, [email, mode, password]);
+  }, [applyRecoveryFlags, canClaimPassword, claimLegacy, email, mode, password]);
 
   const passkeyLogin = useCallback(async () => {
     setBusy(true);
@@ -73,7 +107,7 @@ export function AuthPanel() {
       window.location.assign("/");
     } catch {
       setCanPasskey(true);
-      setMessage("パスキー認証に失敗しました。メールでパスワードを設定してください。");
+      setMessage("パスキー認証に失敗しました。パスワードを設定して入ってください。");
     } finally {
       setBusy(false);
     }
@@ -105,13 +139,16 @@ export function AuthPanel() {
     }
   }, [email]);
 
+  const submitLabel =
+    mode === "register" ? "アカウントを作る" : canClaimPassword ? "パスワードを設定して入る" : "ログイン";
+
   return (
     <div className="mx-auto w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/80 p-5">
       <h1 className="text-lg font-semibold text-zinc-50">
         {mode === "login" ? "ログイン" : "アカウント作成"}
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-400">
-        検索はログインなしで使えます。アカウントはお気に入りの端末間同期用です。新規はパスワードだけです。以前パスキーだけで作った口座は、メールでパスワードを足せます。
+        検索はログインなしで使えます。アカウントはお気に入りの端末間同期用です。新規はパスワードだけです。以前パスキーだけで作った口座は、パスキーが無い端末でもパスワードを足して入れます。
       </p>
       <div className="mt-4 flex gap-2">
         <button
@@ -132,6 +169,7 @@ export function AuthPanel() {
             setMode("register");
             setMessage(null);
             setCanPasskey(false);
+            setCanClaimPassword(false);
           }}
           className={`rounded-full px-3 py-1.5 text-sm ${
             mode === "register" ? "bg-zinc-100 text-zinc-950" : "border border-zinc-700 text-zinc-300"
@@ -161,7 +199,7 @@ export function AuthPanel() {
           パスワード
           <input
             type="password"
-            autoComplete={mode === "register" ? "new-password" : "current-password"}
+            autoComplete={mode === "register" || canClaimPassword ? "new-password" : "current-password"}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100"
@@ -172,10 +210,10 @@ export function AuthPanel() {
           disabled={busy}
           className="w-full rounded-lg bg-emerald-500 px-3 py-2 text-sm font-medium text-emerald-950 disabled:opacity-60"
         >
-          {mode === "register" ? "アカウントを作る" : "ログイン"}
+          {submitLabel}
         </button>
       </form>
-      {mode === "login" || canPasskey ? (
+      {mode === "login" && !canClaimPassword ? (
         <button
           type="button"
           disabled={busy || !email.trim()}

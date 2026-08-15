@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createUserSession, loginByEmailAndPassword } from "@/lib/auth";
+import { passkeyRecoveryFlags } from "@/lib/authRecovery";
 import { sanitizeEmail } from "@/lib/authShared";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 import { getAuthMethods } from "@/lib/userStore";
@@ -34,15 +35,17 @@ export async function POST(request: NextRequest) {
   const methods = await getAuthMethods(email);
   const user = await loginByEmailAndPassword(email, password);
   if (!user) {
-    const canPasskey = methods.exists && !methods.hasPassword && methods.hasPasskey;
-    const message = canPasskey
-      ? "パスワードが未設定のアカウントです。この端末にパスキーが無いときは、メールでパスワードを設定してください。"
-      : "メールアドレスまたはパスワードが正しくありません。";
+    const flags = passkeyRecoveryFlags(methods);
+    const message = flags.canClaimPassword
+      ? "パスワードが未設定です。同じ画面のボタンで、今のパスワードを設定して入れます。"
+      : flags.canPasskey
+        ? "パスワードが未設定のアカウントです。この端末にパスキーが無いときは、メールでパスワードを設定してください。"
+        : "メールアドレスまたはパスワードが正しくありません。";
     return NextResponse.json(
       {
         error: message,
         message,
-        canPasskey,
+        ...flags,
       },
       { status: 401 },
     );
