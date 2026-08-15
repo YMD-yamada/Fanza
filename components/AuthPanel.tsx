@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { authenticateWithPasskey } from "@/lib/passkey-client";
 
 type AuthMode = "login" | "register";
@@ -27,6 +27,28 @@ export function AuthPanel() {
   const [message, setMessage] = useState<string | null>(null);
   const [canPasskey, setCanPasskey] = useState(false);
   const [canClaimPassword, setCanClaimPassword] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
+        const data = (await response.json().catch(() => null)) as { user?: unknown } | null;
+        if (!cancelled && data?.user) {
+          window.location.replace("/");
+          return;
+        }
+      } catch {
+        /* stay on login */
+      }
+      if (!cancelled) setCheckingSession(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const applyRecoveryFlags = useCallback((payload: AuthPayload | null) => {
     setCanPasskey(Boolean(payload?.canPasskey));
@@ -38,7 +60,7 @@ export function AuthPanel() {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, remember }),
     });
     const payload = (await response.json().catch(() => null)) as AuthPayload | null;
     if (!response.ok) {
@@ -48,7 +70,7 @@ export function AuthPanel() {
     }
     window.location.assign("/");
     return true;
-  }, [applyRecoveryFlags, email, password]);
+  }, [applyRecoveryFlags, email, password, remember]);
 
   const submit = useCallback(async () => {
     setBusy(true);
@@ -67,7 +89,7 @@ export function AuthPanel() {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, remember }),
       });
       const payload = (await response.json().catch(() => null)) as AuthPayload | null;
       if (response.status === 409) {
@@ -92,7 +114,7 @@ export function AuthPanel() {
     } finally {
       setBusy(false);
     }
-  }, [applyRecoveryFlags, canClaimPassword, claimLegacy, email, mode, password]);
+  }, [applyRecoveryFlags, canClaimPassword, claimLegacy, email, mode, password, remember]);
 
   const passkeyLogin = useCallback(async () => {
     setBusy(true);
@@ -142,13 +164,21 @@ export function AuthPanel() {
   const submitLabel =
     mode === "register" ? "アカウントを作る" : canClaimPassword ? "パスワードを設定して入る" : "ログイン";
 
+  if (checkingSession) {
+    return (
+      <div className="mx-auto w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/80 p-5">
+        <p className="text-sm text-zinc-400">ログイン状態を確認しています…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/80 p-5">
       <h1 className="text-lg font-semibold text-zinc-50">
         {mode === "login" ? "ログイン" : "アカウント作成"}
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-400">
-        検索はログインなしで使えます。アカウントはお気に入りの端末間同期用です。新規はパスワードだけです。以前パスキーだけで作った口座は、パスキーが無い端末でもパスワードを足して入れます。
+        検索はログインなしで使えます。このサイトのお気に入り同期用です。FANZA公式の会員ログイン連携は第三者サイト向けに公開されていないため、FANZA本体の購入履歴やマイリストは取り込めません。FANZAと同じメールで作ると管理しやすいです。一度入れば、この端末では次回から自動で入ります。
       </p>
       <div className="mt-4 flex gap-2">
         <button
@@ -204,6 +234,15 @@ export function AuthPanel() {
             onChange={(event) => setPassword(event.target.value)}
             className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100"
           />
+        </label>
+        <label className="flex items-start gap-2 text-sm text-zinc-300">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(event) => setRemember(event.target.checked)}
+            className="mt-1"
+          />
+          <span>この端末では次回から自動で入る（約13か月）</span>
         </label>
         <button
           type="submit"

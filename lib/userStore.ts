@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { get, put } from "@vercel/blob";
 
+import { SESSION_MAX_PER_USER } from "@/lib/authShared";
 import {
   type FavoriteTerm,
   sanitizeFavoriteTerms,
@@ -41,6 +42,7 @@ type StoredSession = {
   tokenHash: string;
   userId: string;
   expiresAt: string;
+  persist?: boolean;
 };
 
 type UserStoreShape = {
@@ -124,7 +126,15 @@ function normalizeStore(raw: Partial<UserStoreShape> | null | undefined): UserSt
         passkeys: sanitizePasskeys(user.passkeys),
       }))
     : [];
-  const sessions = Array.isArray(raw?.sessions) ? raw.sessions : [];
+  const sessions = Array.isArray(raw?.sessions)
+    ? raw.sessions.filter(
+        (item) =>
+          item &&
+          typeof item.tokenHash === "string" &&
+          typeof item.userId === "string" &&
+          typeof item.expiresAt === "string",
+      )
+    : [];
   const webauthnChallenges = Array.isArray(raw?.webauthnChallenges)
     ? raw.webauthnChallenges.filter(
         (item) =>
@@ -495,19 +505,31 @@ export async function createStoredSession(
   token: string,
   userId: string,
   expiresAt: Date,
+  persist = true,
 ): Promise<void> {
   const store = await readStore();
   removeExpiredSessions(store);
-  store.sessions = store.sessions.filter((session) => session.userId !== userId);
-  store.sessions.push({
-    tokenHash: hashToken(token),
-    userId,
-    expiresAt: expiresAt.toISOString(),
-  });
+  const others = store.sessions.filter((session) => session.userId !== userId);
+  const mine = store.sessions
+    .filter((session) => session.userId === userId)
+    .sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime());
+  const keptMine = mine.slice(Math.max(0, mine.length - (SESSION_MAX_PER_USER - 1)));
+  store.sessions = [
+    ...others,
+    ...keptMine,
+    {
+      tokenHash: hashToken(token),
+      userId,
+      expiresAt: expiresAt.toISOString(),
+      persist,
+    },
+  ];
   await writeStore(store);
 }
 
-export async function getSessionUserId(token: string): Promise<string | null> {
+export async function getSessionRecord(
+  token: string,
+): Promise<{ userId: string; persist: boolean; expiresAt: Date } | null> {
   const store = await readStore();
   const beforeCount = store.sessions.length;
   removeExpiredSessions(store);
@@ -516,7 +538,28 @@ export async function getSessionUserId(token: string): Promise<string | null> {
   if (store.sessions.length !== beforeCount) {
     await writeStore(store);
   }
-  return session?.userId ?? null;
+  if (!session) return null;
+  return {
+    userId: session.userId,
+    persist: session.persist !== false,
+    expiresAt: new Date(session.expiresAt),
+  };
+}
+
+export async function getSessionUserId(token: string): Promise<string | null> {
+  const record = await getSessionRecord(token);
+  return record?.userId ?? null;
+}
+
+export async function extendStoredSession(token: string, expiresAt: Date): Promise<boolean> {
+  const store = await readStore();
+  removeExpiredSessions(store);
+  const tokenHash = hashToken(token);
+  const session = store.sessions.find((s) => s.tokenHash === tokenHash);
+  if (!session) return false;
+  session.expiresAt = expiresAt.toISOString();
+  await writeStore(store);
+  return true;
 }
 
 export async function clearStoredSession(token: string): Promise<void> {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createPasswordHash, createUserSession } from "@/lib/auth";
-import { validateAuthCredentials } from "@/lib/authShared";
+import { readRememberMe, validateAuthCredentials } from "@/lib/authShared";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 import { consumePasswordResetToken, findUserById, setUserPasswordHash } from "@/lib/userStore";
 
@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as {
     token?: unknown;
     password?: unknown;
+    remember?: unknown;
   } | null;
   const token = typeof body?.token === "string" ? body.token.trim() : "";
   const password = typeof body?.password === "string" ? body.password : "";
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "ユーザーが見つかりません。" }, { status: 404 });
   }
 
-  await createUserSession(user.id);
+  await createUserSession(user.id, readRememberMe(body?.remember));
   return NextResponse.json({
     ok: true,
     user,

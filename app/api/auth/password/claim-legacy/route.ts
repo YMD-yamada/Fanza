@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createPasswordHash, createUserSession, getCurrentUser } from "@/lib/auth";
 import { passkeyRecoveryFlags } from "@/lib/authRecovery";
-import { validateAuthPayload } from "@/lib/authShared";
+import { readRememberMe, validateAuthPayload } from "@/lib/authShared";
 import { isAccountSyncEnabled, isPasswordResetEmailConfigured } from "@/lib/runtimeConfig";
 import { findUserByEmail, getAuthMethods, setUserPasswordHash } from "@/lib/userStore";
 
@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as {
     email?: unknown;
     password?: unknown;
+    remember?: unknown;
   } | null;
   const validation = validateAuthPayload(body?.email, body?.password);
   if (!validation.ok) {
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     return jsonError("パスワードの保存に失敗しました。", 500);
   }
 
-  await createUserSession(user.id);
+  await createUserSession(user.id, readRememberMe(body?.remember));
   return NextResponse.json({
     ok: true,
     user: {

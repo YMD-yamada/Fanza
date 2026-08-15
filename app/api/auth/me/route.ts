@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getCurrentUser } from "@/lib/auth";
+import { touchCurrentSession } from "@/lib/auth";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 import { getAuthMethodsByUserId } from "@/lib/userStore";
 
@@ -8,7 +8,7 @@ export async function GET() {
   if (!isAccountSyncEnabled()) {
     return NextResponse.json({ user: null, syncEnabled: false });
   }
-  const user = await getCurrentUser();
+  const user = await touchCurrentSession();
   if (!user) {
     return NextResponse.json({ user: null, syncEnabled: true });
   }

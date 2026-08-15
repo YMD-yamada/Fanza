@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createUserSession, loginByEmailAndPassword } from "@/lib/auth";
 import { passkeyRecoveryFlags } from "@/lib/authRecovery";
-import { sanitizeEmail } from "@/lib/authShared";
+import { readRememberMe, sanitizeEmail } from "@/lib/authShared";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 import { getAuthMethods } from "@/lib/userStore";
 
@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
 
   const email = sanitizeEmail((body as { email?: unknown }).email);
   const password = String((body as { password?: unknown }).password ?? "");
+  const persist = readRememberMe((body as { remember?: unknown }).remember);
 
   if (!email || !password) {
     return badRequest("email and password are required.");
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await createUserSession(user.id);
+  await createUserSession(user.id, persist);
   const after = await getAuthMethods(user.email);
 
   return NextResponse.json({

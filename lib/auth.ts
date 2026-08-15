@@ -1,19 +1,26 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 
-import { validateAuthCredentials } from "@/lib/authShared";
+import {
+  SESSION_COOKIE_NAME,
+  SESSION_MAX_AGE_SECONDS,
+  SESSION_TRANSIENT_AGE_SECONDS,
+  validateAuthCredentials,
+} from "@/lib/authShared";
 import {
   clearStoredSession,
   createStoredSession,
+  extendStoredSession,
+  getSessionRecord,
   getSessionUserId,
   findUserById,
   verifyUser,
 } from "@/lib/userStore";
 import { FAVORITES_LIMIT, FAVORITES_MAX_BYTES } from "@/lib/savedItem";
 
-export const SESSION_COOKIE_NAME = "fanza_session";
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+export { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS };
 const HASH_LENGTH = 64;
+const SESSION_TOUCH_AFTER_SECONDS = SESSION_MAX_AGE_SECONDS / 2;
 
 export type AuthUser = {
   id: string;
@@ -25,14 +32,17 @@ export function createSessionToken(): string {
   return randomBytes(32).toString("hex");
 }
 
-export async function setSessionCookie(token: string) {
+export async function setSessionCookie(token: string, persist = true) {
   const cookieStore = await cookies();
+  const maxAge = persist ? SESSION_MAX_AGE_SECONDS : undefined;
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
+    ...(maxAge
+      ? { maxAge, expires: new Date(Date.now() + maxAge * 1000) }
+      : {}),
   });
 }
 
@@ -52,11 +62,32 @@ export async function getCurrentUser() {
   return user;
 }
 
-export async function createUserSession(userId: string) {
+/** Refresh a persistent cookie so returning visitors stay signed in. */
+export async function touchCurrentSession() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  if (!token) return null;
+  const record = await getSessionRecord(token);
+  if (!record) return null;
+  const user = await findUserById(record.userId);
+  if (!user) return null;
+  if (record.persist) {
+    const remainingMs = record.expiresAt.getTime() - Date.now();
+    if (remainingMs < SESSION_TOUCH_AFTER_SECONDS * 1000) {
+      const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
+      await extendStoredSession(token, expiresAt);
+      await setSessionCookie(token, true);
+    }
+  }
+  return user;
+}
+
+export async function createUserSession(userId: string, persist = true) {
   const token = createSessionToken();
-  const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
-  await createStoredSession(token, userId, expiresAt);
-  await setSessionCookie(token);
+  const maxAge = persist ? SESSION_MAX_AGE_SECONDS : SESSION_TRANSIENT_AGE_SECONDS;
+  const expiresAt = new Date(Date.now() + maxAge * 1000);
+  await createStoredSession(token, userId, expiresAt, persist);
+  await setSessionCookie(token, persist);
 }
 
 export async function loginByEmailAndPassword(email: string, password: string) {

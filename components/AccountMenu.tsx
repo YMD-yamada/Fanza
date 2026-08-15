@@ -174,7 +174,7 @@ function LoggedInMenu({ user }: { user: SessionUser }) {
           role="menu"
           className="absolute right-0 z-40 mt-2 w-72 rounded-xl border border-neutral-800 bg-neutral-950 p-3 shadow-xl"
         >
-          <p className="text-xs text-neutral-400">お気に入りはログイン中に端末間同期されます。</p>
+          <p className="text-xs text-neutral-400">お気に入りはログイン中に端末間同期されます。この端末では自動ログインします。</p>
           <form className="mt-3 space-y-2" onSubmit={(event) => void changePassword(event)}>
             {hasPassword ? (
               <input
