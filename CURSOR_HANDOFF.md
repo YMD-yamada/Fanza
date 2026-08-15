@@ -8,6 +8,7 @@
 - Discover: 空ホームに人気・新着レール。`view=rank|new` で一覧。詳細に関連作品。カードにメーカー／時間／サンプルあり。クイック検索から「ロリ系」を削除。
 - Legal: 年齢確認は 18+ と規約同意チェック。アフィリエイトは「広告 · FANZAで見る」+ `rel=sponsored`。`/legal/notice`。販売者は FANZA。PWA manifest はホーム画面追加用。
 - SEO: `rating: adult`、SearchAction JSON-LD、catalog sitemap、robots で `/login` `/reset-password` を disallow。ルート canonical を外した。
+- PR #28: CI green。draft 解除済み。`docs/RELEASE_FLOW.md` を追加。`master` マージで本番 https://fanza-nine.vercel.app 。ストア申請はしない。
 
 ## 2026-08-08 Session (remove passkeys)
 

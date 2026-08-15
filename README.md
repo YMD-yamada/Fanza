@@ -76,6 +76,8 @@ npm run dev
 - DMM/FANZA API・画像の**クレジット／利用条件**に従ってください（`ApiCredit` 等）。
   - 商用利用可否、画像・サムネイル利用、キャッシュ可否と保存期間（DMM側ポリシーを確認）
 
+公開手順の要約は `docs/RELEASE_FLOW.md`（`master` マージ → Vercel production。公式ストアには出さない）。
+
 ## 本番デプロイ（準備済みの選択肢）
 
 ### 環境変数（本番）
