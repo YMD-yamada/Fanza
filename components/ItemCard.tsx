@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { memo } from "react";
 
+import { formatVolume } from "@/lib/browse";
 import type { CatalogId } from "@/lib/catalogs";
 import { itemDetailPath } from "@/lib/item-link";
 import type { NormalizedItem } from "@/lib/types";
@@ -27,6 +28,7 @@ function StarRating({ avg, count }: { avg: number; count?: number }) {
 
 export const ItemCard = memo(function ItemCard({ item, catalog, returnTo }: ItemCardProps) {
   const detailPath = itemDetailPath(item.id, catalog, item.source);
+  const duration = formatVolume(item.volume);
   const detailHref = returnTo
     ? {
         pathname: detailPath,
@@ -88,8 +90,11 @@ export const ItemCard = memo(function ItemCard({ item, catalog, returnTo }: Item
         )}
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-400">
+          {item.makerNames?.[0] && <span>{item.makerNames[0]}</span>}
+          {duration && <span>{duration}</span>}
           {item.releaseDate && <span>{item.releaseDate.slice(0, 10)}</span>}
           {item.listPrice && <span>{item.listPrice}</span>}
+          {item.sampleVideoUrl && <span className="text-amber-300">サンプルあり</span>}
           {item.reviewAverage != null && <StarRating avg={item.reviewAverage} count={item.reviewCount} />}
         </div>
 

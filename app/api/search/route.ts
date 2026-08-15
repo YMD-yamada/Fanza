@@ -17,13 +17,6 @@ export async function GET(request: NextRequest) {
   const catalog = getCatalog(searchParams.get("cat")).id;
   const source = searchParams.get("source");
 
-  if (!keyword.trim()) {
-    return NextResponse.json(
-      { message: "q parameter is required." },
-      { status: 400 },
-    );
-  }
-
   try {
     const sourceKey = source && isProviderSourceId(source) ? source : undefined;
     const data = await aggregateSearch({

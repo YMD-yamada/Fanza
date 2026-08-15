@@ -1,8 +1,12 @@
+import type { Metadata } from "next";
+
+import { BrowseRail } from "@/components/BrowseRail";
 import { CatalogTabs } from "@/components/CatalogTabs";
 import { RecentQueriesBar } from "@/components/RecentQueriesBar";
 import { FavoritesSection, HistorySection } from "@/components/SavedSection";
 import { SearchBar } from "@/components/SearchBar";
 import { SearchResultsInfinite } from "@/components/SearchResultsInfinite";
+import { browsePath, parseBrowseView, sortForBrowse } from "@/lib/browse";
 import { getCatalog } from "@/lib/catalogs";
 import {
   BADGE_HAS_SAMPLE_VIDEO_LABEL,
@@ -16,6 +20,8 @@ import {
 } from "@/lib/home-copy";
 import { filterNormalizedItems } from "@/lib/item-filters";
 import { aggregateSearch } from "@/lib/search-aggregate";
+import { homeMetadata } from "@/lib/seo";
+import type { SearchResponse } from "@/lib/types";
 
 type HomeProps = {
   searchParams: Promise<{
@@ -27,13 +33,32 @@ type HomeProps = {
     has_video?: string;
     cat?: string;
     debug?: string;
+    view?: string;
   }>;
 };
+
+export async function generateMetadata({ searchParams }: HomeProps): Promise<Metadata> {
+  const params = await searchParams;
+  return homeMetadata({
+    q: params.q,
+    cat: params.cat,
+    view: params.view,
+  });
+}
+
+async function safeSearch(input: Parameters<typeof aggregateSearch>[0]): Promise<SearchResponse | null> {
+  try {
+    return await aggregateSearch(input);
+  } catch {
+    return null;
+  }
+}
 
 export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
-  const sort = params.sort ?? "rank";
+  const view = parseBrowseView(params.view);
+  const sort = q ? (params.sort ?? "rank") : view ? sortForBrowse(view) : (params.sort ?? "rank");
   const gteDate = params.gte_date ?? "";
   const pMin = Number(params.price_min ?? "") || 0;
   const pMax = Number(params.price_max ?? "") || 0;
@@ -41,15 +66,23 @@ export default async function Home({ searchParams }: HomeProps) {
   const catalog = getCatalog(params.cat).id;
   const debug = params.debug === "1";
   const buildVersion = (process.env.VERCEL_GIT_COMMIT_SHA ?? "local").slice(0, 7);
+  const showBrowseList = Boolean(q || view);
 
-  const raw = q
-    ? await aggregateSearch({
+  const raw = showBrowseList
+    ? await safeSearch({
         keyword: q,
         page: 1,
         catalog,
         sort,
         ...(gteDate ? { gteDate } : {}),
       })
+    : null;
+
+  const rankRail = !showBrowseList
+    ? await safeSearch({ keyword: "", page: 1, catalog, sort: "rank" })
+    : null;
+  const newRail = !showBrowseList
+    ? await safeSearch({ keyword: "", page: 1, catalog, sort: "-date" })
     : null;
 
   const clientFilters = {
@@ -76,7 +109,14 @@ export default async function Home({ searchParams }: HomeProps) {
     has_video: hasVideo ? "1" : undefined,
   };
 
-  const infiniteKey = `${catalog}|${q}|${sort}|${gteDate}|${pMin}|${pMax}|${hasVideo ? "1" : "0"}`;
+  const infiniteKey = `${catalog}|${q}|${sort}|${view ?? ""}|${gteDate}|${pMin}|${pMax}|${hasVideo ? "1" : "0"}`;
+  const listHeading = q
+    ? null
+    : view === "new"
+      ? "新着"
+      : view === "rank"
+        ? "人気"
+        : null;
 
   return (
     <div className="space-y-6">
@@ -91,10 +131,22 @@ export default async function Home({ searchParams }: HomeProps) {
       <CatalogTabs active={catalog} tabParams={tabParams} />
       <SearchBar key={`searchbar-${catalog}`} />
 
-      {!q && <RecentQueriesBar />}
+      {!q && !view && <RecentQueriesBar />}
 
-      {!q && (
+      {!showBrowseList && (
         <>
+          <BrowseRail
+            title="人気"
+            href={browsePath(catalog, "rank")}
+            items={rankRail?.items ?? []}
+            catalog={catalog}
+          />
+          <BrowseRail
+            title="新着"
+            href={browsePath(catalog, "new")}
+            items={newRail?.items ?? []}
+            catalog={catalog}
+          />
           <FavoritesSection />
           <HistorySection />
           <section className="rounded-xl border border-neutral-800 bg-neutral-900/60 px-5 py-8 text-center text-sm text-neutral-400">
@@ -103,8 +155,9 @@ export default async function Home({ searchParams }: HomeProps) {
         </>
       )}
 
-      {q && raw && (
+      {showBrowseList && raw && (
         <section className="space-y-4">
+          {listHeading ? <h2 className="text-lg font-semibold">{listHeading}</h2> : null}
           <div className="flex flex-wrap gap-2">
             {badges.map((b) => (
               <span key={b.label} className={`rounded-full px-2.5 py-0.5 text-xs ${b.cls}`}>

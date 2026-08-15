@@ -88,6 +88,8 @@ function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
 
   const actressInfo = (itemInfo.actress as unknown[] | undefined) ?? [];
   const genreInfo = (itemInfo.genre as unknown[] | undefined) ?? [];
+  const makerInfo = (itemInfo.maker as unknown[] | undefined) ?? [];
+  const seriesInfo = (itemInfo.series as unknown[] | undefined) ?? [];
   const rawAffiliateUrl = getString(raw.affiliateURL);
   const affiliateUrl = rawAffiliateUrl ?? buildAffiliateUrl(getString(raw.URL));
 
@@ -108,6 +110,9 @@ function normalizeItem(raw: Record<string, unknown>): NormalizedItem {
     description: getString(raw.comment),
     actressNames: getArray(actressInfo.map((x) => (x as { name?: string }).name)),
     genres: getArray(genreInfo.map((x) => (x as { name?: string }).name)),
+    makerNames: getArray(makerInfo.map((x) => (x as { name?: string }).name)),
+    seriesNames: getArray(seriesInfo.map((x) => (x as { name?: string }).name)),
+    volume: getString(raw.volume),
     packageImageUrl,
     largeImageUrl,
     sampleVideoUrl,
@@ -161,12 +166,15 @@ export async function searchFanza(
     site: cat.site,
     service: cat.service,
     floor: cat.floor,
-    keyword: filters.keyword,
     sort: filters.sort ?? "rank",
     output: "json",
     hits: String(HITS),
     offset: String((filters.page - 1) * HITS + 1),
   });
+  const keyword = filters.keyword.trim();
+  if (keyword) {
+    params.set("keyword", keyword);
+  }
 
   if (filters.gteDate && DATE_RE.test(filters.gteDate)) {
     params.set("gte_date", toApiDate(filters.gteDate, "00:00:00"));
