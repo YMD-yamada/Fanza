@@ -64,15 +64,26 @@ export async function POST(request: NextRequest) {
   const builtResetUrl = created
     ? `${siteBase(request)}/reset-password?token=${created.token}`
     : null;
-  if (builtResetUrl) {
-    await maybeSendResetEmail(email, builtResetUrl);
+  const mailConfigured = Boolean(process.env.RESEND_API_KEY?.trim() && process.env.AUTH_EMAIL_FROM?.trim());
+  let emailed = false;
+  if (builtResetUrl && mailConfigured) {
+    emailed = await maybeSendResetEmail(email, builtResetUrl);
   }
   const resetUrl =
     builtResetUrl && process.env.AUTH_RETURN_RESET_URL === "1" ? builtResetUrl : undefined;
 
+  let message = GENERIC_MESSAGE;
+  if (!mailConfigured) {
+    message =
+      "再設定メールの送信設定がありません。パスキーが残っている端末から入るか、メール再設定を有効にしてください。";
+  } else if (builtResetUrl && !emailed) {
+    message = "案内メールの送信に失敗しました。時間をおいて再度お試しください。";
+  }
+
   return NextResponse.json({
     ok: true,
-    message: GENERIC_MESSAGE,
+    message,
+    emailed,
     ...(resetUrl ? { resetUrl } : {}),
   });
 }

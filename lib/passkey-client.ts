@@ -6,6 +6,14 @@ import type {
 
 const SAME_ORIGIN: RequestInit = { credentials: "same-origin" };
 
+export function explainPasskeyFailure(error: unknown): string {
+  const name = error && typeof error === "object" && "name" in error ? String(error.name) : "";
+  if (name === "NotAllowedError" || name === "AbortError" || name === "InvalidStateError") {
+    return "この端末に使えるパスキーがありません。メールでパスワードを設定してください。";
+  }
+  return "パスキー認証がキャンセルされたか失敗しました。この端末に無い場合はメールでパスワードを設定してください。";
+}
+
 export async function authenticateWithPasskey(
   email: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -36,8 +44,8 @@ export async function authenticateWithPasskey(
   let assertion: AuthenticationResponseJSON;
   try {
     assertion = await startAuthentication({ optionsJSON: optionsData.options });
-  } catch {
-    return { ok: false, error: "パスキー認証がキャンセルされたか失敗しました。" };
+  } catch (error) {
+    return { ok: false, error: explainPasskeyFailure(error) };
   }
 
   const verifyRes = await fetch("/api/auth/passkey/login/verify", {

@@ -23,7 +23,7 @@ export function AuthPanel() {
   const submit = useCallback(async () => {
     setBusy(true);
     setMessage(null);
-    setCanPasskey(false);
+    if (mode === "register") setCanPasskey(false);
     try {
       const path = mode === "register" ? "/api/auth/register" : "/api/auth/login";
       const response = await fetch(path, {
@@ -34,10 +34,21 @@ export function AuthPanel() {
       });
       const payload = (await response.json().catch(() => null)) as {
         error?: string;
+        message?: string;
         canPasskey?: boolean;
       } | null;
+      if (response.status === 409) {
+        setMode("login");
+        setCanPasskey(Boolean(payload?.canPasskey));
+        setMessage(
+          payload?.canPasskey
+            ? "すでに登録済みです。パスワード未設定なので、メールでパスワードを設定するか、パスキーが残っている端末から入ってください。"
+            : "すでに登録済みです。ログインしてください。",
+        );
+        return;
+      }
       if (!response.ok) {
-        setCanPasskey(Boolean(payload?.canPasskey) && mode === "login");
+        setCanPasskey(Boolean(payload?.canPasskey));
         setMessage(readErrorMessage(payload, "認証に失敗しました"));
         return;
       }
@@ -55,12 +66,14 @@ export function AuthPanel() {
     try {
       const result = await authenticateWithPasskey(email);
       if (!result.ok) {
+        setCanPasskey(true);
         setMessage(result.error);
         return;
       }
       window.location.assign("/");
     } catch {
-      setMessage("パスキー認証に失敗しました");
+      setCanPasskey(true);
+      setMessage("パスキー認証に失敗しました。メールでパスワードを設定してください。");
     } finally {
       setBusy(false);
     }
@@ -81,7 +94,10 @@ export function AuthPanel() {
         setMessage(readErrorMessage(payload, "リセット用メールを送れませんでした"));
         return;
       }
-      setMessage(payload?.message ?? "入力されたメールアドレス宛に案内を送りました。届かない場合は迷惑メールも確認してください。");
+      setMessage(
+        payload?.message ??
+          "入力されたメールアドレス宛に案内を送りました。届かない場合は迷惑メールも確認してください。",
+      );
     } catch {
       setMessage("通信に失敗しました");
     } finally {
@@ -95,7 +111,7 @@ export function AuthPanel() {
         {mode === "login" ? "ログイン" : "アカウント作成"}
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-400">
-        検索はログインなしで使えます。アカウントはお気に入りの端末間同期用です。パスキーは作りません。
+        検索はログインなしで使えます。アカウントはお気に入りの端末間同期用です。新規はパスワードだけです。以前パスキーだけで作った口座は、メールでパスワードを足せます。
       </p>
       <div className="mt-4 flex gap-2">
         <button
@@ -103,7 +119,6 @@ export function AuthPanel() {
           onClick={() => {
             setMode("login");
             setMessage(null);
-            setCanPasskey(false);
           }}
           className={`rounded-full px-3 py-1.5 text-sm ${
             mode === "login" ? "bg-zinc-100 text-zinc-950" : "border border-zinc-700 text-zinc-300"
@@ -160,14 +175,18 @@ export function AuthPanel() {
           {mode === "register" ? "アカウントを作る" : "ログイン"}
         </button>
       </form>
-      {mode === "login" ? (
+      {mode === "login" || canPasskey ? (
         <button
           type="button"
           disabled={busy || !email.trim()}
           onClick={() => void forgot()}
-          className="mt-3 text-sm text-zinc-400 underline disabled:opacity-50"
+          className={`mt-3 w-full rounded-lg px-3 py-2 text-sm disabled:opacity-50 ${
+            canPasskey
+              ? "bg-sky-600 font-medium text-white"
+              : "text-left text-zinc-400 underline"
+          }`}
         >
-          パスワードを忘れた
+          {canPasskey ? "メールでパスワードを設定" : "パスワードを忘れた"}
         </button>
       ) : null}
       {canPasskey ? (
@@ -175,9 +194,9 @@ export function AuthPanel() {
           type="button"
           disabled={busy}
           onClick={() => void passkeyLogin()}
-          className="mt-3 w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm text-zinc-200 disabled:opacity-60"
+          className="mt-2 w-full rounded-lg border border-zinc-600 px-3 py-2 text-sm text-zinc-200 disabled:opacity-60"
         >
-          このアカウントはパスキーのみです。パスキーで入る
+          別の端末のパスキーで入る
         </button>
       ) : null}
       {message ? <p className="mt-3 text-sm text-amber-200">{message}</p> : null}

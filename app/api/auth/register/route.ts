@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
         exists: true,
         hasPassword: methods.hasPassword,
         hasPasskey: methods.hasPasskey,
+        canPasskey: methods.hasPasskey && !methods.hasPassword,
       },
       { status: 409 },
     );
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
         exists: true,
         hasPassword: again.hasPassword,
         hasPasskey: again.hasPasskey,
+        canPasskey: again.hasPasskey && !again.hasPassword,
       },
       { status: 409 },
     );
