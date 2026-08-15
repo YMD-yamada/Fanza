@@ -28,7 +28,6 @@ export function AuthPanel() {
   const [canPasskey, setCanPasskey] = useState(false);
   const [canClaimPassword, setCanClaimPassword] = useState(false);
   const [remember, setRemember] = useState(true);
-  const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +42,6 @@ export function AuthPanel() {
       } catch {
         /* stay on login */
       }
-      if (!cancelled) setCheckingSession(false);
     })();
     return () => {
       cancelled = true;
@@ -163,14 +161,6 @@ export function AuthPanel() {
 
   const submitLabel =
     mode === "register" ? "アカウントを作る" : canClaimPassword ? "パスワードを設定して入る" : "ログイン";
-
-  if (checkingSession) {
-    return (
-      <div className="mx-auto w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/80 p-5">
-        <p className="text-sm text-zinc-400">ログイン状態を確認しています…</p>
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/80 p-5">
