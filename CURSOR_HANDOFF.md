@@ -1,5 +1,14 @@
 # CURSOR HANDOFF
 
+## 2026-08-15 Session (R18 web value + legal + store decision)
+
+- Branch `cursor/r18-web-legal-value-be62`: keep shipping as **Web only**. App Store / Google Play / Microsoft Store は成人向けのため出さない（`docs/STORE_AND_LEGAL.md`）。
+- Auth: guest はヘッダー「ログイン」→ `/login`（メール＋パスワードのみ）。パスキーはパスワード 401 かつ `canPasskey` のときだけ。ログイン後メニューはパスワード変更と、残存パスキー削除のみ。
+- Favorites sync: 初回は local+remote を merge。別ユーザーの local は引き継がない。remote を localStorage にミラー。`getSessionUserId` は期限切れprune時だけ write。
+- Discover: 空ホームに人気・新着レール。`view=rank|new` で一覧。詳細に関連作品。カードにメーカー／時間／サンプルあり。クイック検索から「ロリ系」を削除。
+- Legal: 年齢確認は 18+ と規約同意チェック。アフィリエイトは「広告 · FANZAで見る」+ `rel=sponsored`。`/legal/notice`。販売者は FANZA。PWA manifest はホーム画面追加用。
+- SEO: `rating: adult`、SearchAction JSON-LD、catalog sitemap、robots で `/login` `/reset-password` を disallow。ルート canonical を外した。
+
 ## 2026-08-08 Session (remove passkeys)
 
 - Branch `feat/remove-passkeys-for-password-only` → PR #27 merged (`a777383f`); production → https://fanza-nine.vercel.app
