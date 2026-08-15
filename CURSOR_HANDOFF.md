@@ -1,5 +1,10 @@
 # CURSOR HANDOFF
 
+## 2026-08-15 Session (FANZA SSO + auto-login)
+
+- FANZA公式の会員ログイン（OAuth/OpenID）は第三者サイト向けに公開されていない。偽のFANZAログインフォームは作らない。
+- 実装: セッション約13か月・端末ごとに最大8本・訪問で延長。ログイン済みなら `/login` からホームへ。既定で「この端末では次回から自動で入る」。
+
 ## 2026-08-15 Session (R18 web value + legal + store decision)
 
 - Branch `cursor/r18-web-legal-value-be62`: keep shipping as **Web only**. App Store / Google Play / Microsoft Store は成人向けのため出さない（`docs/STORE_AND_LEGAL.md`）。

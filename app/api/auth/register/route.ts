@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createPasswordHash, createUserSession, getCurrentUser } from "@/lib/auth";
 import { passkeyRecoveryFlags } from "@/lib/authRecovery";
-import { validateAuthPayload } from "@/lib/authShared";
+import { readRememberMe, validateAuthPayload } from "@/lib/authShared";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 import { createStoredUser, getAuthMethods } from "@/lib/userStore";
 
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const payload = (await request.json()) as { email?: string; password?: string };
+  const payload = (await request.json()) as { email?: string; password?: string; remember?: unknown };
   const validation = validateAuthPayload(payload.email, payload.password);
   if (!validation.ok) {
     return NextResponse.json(
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await createUserSession(created.user.id);
+  await createUserSession(created.user.id, readRememberMe(payload.remember));
   return NextResponse.json({
     ok: true,
     user: {
