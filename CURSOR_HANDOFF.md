@@ -4,6 +4,7 @@
 
 - FANZA公式の会員ログイン（OAuth/OpenID）は第三者サイト向けに公開されていない。偽のFANZAログインフォームは作らない。
 - 実装: セッション約13か月・端末ごとに最大8本・訪問で延長。ログイン済みなら `/login` からホームへ。既定で「この端末では次回から自動で入る」。
+- PR #31 merged (`c353a20`) → production https://fanza-nine.vercel.app/login 。
 
 ## 2026-08-15 Session (R18 web value + legal + store decision)
 
