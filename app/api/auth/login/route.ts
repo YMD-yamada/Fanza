@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   if (!user) {
     const canPasskey = methods.exists && !methods.hasPassword && methods.hasPasskey;
     const message = canPasskey
-      ? "このアカウントはパスキーのみです。下のボタンから入れます。"
+      ? "パスワードが未設定のアカウントです。この端末にパスキーが無いときは、メールでパスワードを設定してください。"
       : "メールアドレスまたはパスワードが正しくありません。";
     return NextResponse.json(
       {

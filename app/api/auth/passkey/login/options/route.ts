@@ -57,7 +57,9 @@ export async function POST(request: NextRequest) {
     userVerification: "preferred",
     allowCredentials: user.passkeys.map((passkey) => ({
       id: passkey.credentialId,
-      transports: passkey.transports,
+      transports: passkey.transports?.length
+        ? passkey.transports
+        : ["internal", "hybrid", "usb"],
     })),
   });
 

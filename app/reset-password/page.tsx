@@ -49,8 +49,10 @@ function ResetPasswordForm() {
 
   return (
     <section className="mx-auto max-w-md space-y-4 rounded-xl border border-neutral-800 bg-neutral-900/60 p-5">
-      <h1 className="text-lg font-semibold">パスワード再設定</h1>
-      <p className="text-sm text-neutral-400">新しいパスワードを入力してください。</p>
+      <h1 className="text-lg font-semibold">パスワードを設定</h1>
+      <p className="text-sm text-neutral-400">
+        新しいパスワード（8文字以上）を入力するとログインできます。パスキーが使えない端末でも、これ以降はパスワードで入れます。
+      </p>
       <form onSubmit={onSubmit} className="space-y-3">
         <input
           type="password"
@@ -66,7 +68,7 @@ function ResetPasswordForm() {
           disabled={!token || isLoading}
           className="w-full rounded-md bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
         >
-          再設定してログイン
+          設定してログイン
         </button>
       </form>
       {message && <p className="text-xs text-neutral-300">{message}</p>}

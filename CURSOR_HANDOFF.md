@@ -10,6 +10,10 @@
 - SEO: `rating: adult`、SearchAction JSON-LD、catalog sitemap、robots で `/login` `/reset-password` を disallow。ルート canonical を外した。
 - PR #28 merged to `master` (`23f1b49`); production → https://fanza-nine.vercel.app 。ストア申請はしない。`docs/RELEASE_FLOW.md`。
 
+## 2026-08-15 Session (passkey-only recovery)
+
+- Passkey-only 既存口座が iPad 等で入れない: 新規 409 でログインへ切替、メールでパスワード設定を主導線、パスキー失敗時は「この端末に無い」と案内。
+
 ## 2026-08-08 Session (remove passkeys)
 
 - Branch `feat/remove-passkeys-for-password-only` → PR #27 merged (`a777383f`); production → https://fanza-nine.vercel.app
