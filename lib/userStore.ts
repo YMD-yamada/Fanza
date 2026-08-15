@@ -509,10 +509,13 @@ export async function createStoredSession(
 
 export async function getSessionUserId(token: string): Promise<string | null> {
   const store = await readStore();
+  const beforeCount = store.sessions.length;
   removeExpiredSessions(store);
   const tokenHash = hashToken(token);
   const session = store.sessions.find((s) => s.tokenHash === tokenHash);
-  await writeStore(store);
+  if (store.sessions.length !== beforeCount) {
+    await writeStore(store);
+  }
   return session?.userId ?? null;
 }
 

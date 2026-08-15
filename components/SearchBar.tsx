@@ -1,6 +1,7 @@
 "use client";
 
 import { getCatalog } from "@/lib/catalogs";
+import { browsePath } from "@/lib/browse";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -45,7 +46,7 @@ const pricePresets = [
 
 const videoQuickKeywordGroups = [
   { label: "体型・バスト", keywords: ["巨乳", "美乳", "爆乳", "貧乳・微乳", "スレンダー", "ぽっちゃり", "長身", "ミニ系"] },
-  { label: "タイプ", keywords: ["人妻", "熟女", "素人", "女子大生", "OL", "ギャル", "お姉さん", "ロリ系", "痴女", "女教師"] },
+  { label: "タイプ", keywords: ["人妻", "熟女", "素人", "女子大生", "OL", "ギャル", "お姉さん", "痴女", "女教師"] },
   { label: "プレイ・シチュエーション", keywords: ["中出し", "顔射", "ナンパ", "3P・4P", "潮吹き", "イラマチオ", "寝取り・寝取られ", "逆ナンパ", "露出"] },
   { label: "ジャンル・その他", keywords: ["企画", "コスプレ", "VR", "4K", "デビュー作品", "独占配信", "ハイビジョン", "アイドル・芸能人"] },
 ] as const;
@@ -179,7 +180,9 @@ export function SearchBar() {
       { keywords: initialFavoriteKeywords },
     ]),
   );
-  const [sort, setSort] = useState(sp.get("sort") ?? "rank");
+  const [sort, setSort] = useState(
+    sp.get("sort") ?? (sp.get("view") === "new" ? "-date" : "rank"),
+  );
   const [gteDate, setGteDate] = useState(sp.get("gte_date") ?? "");
   const [activeDateIdx, setActiveDateIdx] = useState(() => matchDatePreset(sp.get("gte_date") ?? ""));
   const [priceMin, setPriceMin] = useState(sp.get("price_min") ?? "");
@@ -245,7 +248,13 @@ export function SearchBar() {
   const pickSort = (idx: number) => {
     const value = sortOptions[idx].value;
     setSort(value);
-    if (currentQuery.trim()) navigate({ sort: value });
+    if (currentQuery.trim()) {
+      navigate({ sort: value });
+      return;
+    }
+    if (value === "rank" || value === "-date") {
+      router.push(browsePath(catalogSpec.id, value === "-date" ? "new" : "rank"));
+    }
   };
 
   const pickDate = (idx: number) => {

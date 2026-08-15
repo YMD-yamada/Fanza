@@ -7,12 +7,15 @@ import { createStoredUser, getAuthMethods } from "@/lib/userStore";
 
 export async function POST(request: NextRequest) {
   if (!isAccountSyncEnabled()) {
-    return NextResponse.json({ message: "この環境ではアカウント同期は無効です。" }, { status: 404 });
+    return NextResponse.json(
+      { error: "この環境ではアカウント同期は無効です。", message: "この環境ではアカウント同期は無効です。" },
+      { status: 404 },
+    );
   }
   const currentUser = await getCurrentUser();
   if (currentUser) {
     return NextResponse.json(
-      { message: "すでにログインしています。" },
+      { error: "すでにログインしています。", message: "すでにログインしています。" },
       { status: 400 },
     );
   }
@@ -21,7 +24,7 @@ export async function POST(request: NextRequest) {
   const validation = validateAuthPayload(payload.email, payload.password);
   if (!validation.ok) {
     return NextResponse.json(
-      { message: validation.message },
+      { error: validation.message, message: validation.message },
       { status: 400 },
     );
   }
@@ -30,6 +33,7 @@ export async function POST(request: NextRequest) {
   if (methods.exists) {
     return NextResponse.json(
       {
+        error: "このメールアドレスは既に登録されています。ログインしてください。",
         message: "このメールアドレスは既に登録されています。ログインしてください。",
         exists: true,
         hasPassword: methods.hasPassword,
@@ -45,6 +49,7 @@ export async function POST(request: NextRequest) {
     const again = await getAuthMethods(validation.email);
     return NextResponse.json(
       {
+        error: "このメールアドレスは既に登録されています。ログインしてください。",
         message: "このメールアドレスは既に登録されています。ログインしてください。",
         exists: true,
         hasPassword: again.hasPassword,
@@ -57,7 +62,11 @@ export async function POST(request: NextRequest) {
   await createUserSession(created.user.id);
   return NextResponse.json({
     ok: true,
-    user: created.user,
+    user: {
+      ...created.user,
+      hasPassword: true,
+      hasPasskey: false,
+    },
     message: "アカウントを作成してログインしました。",
   });
 }

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { sanitizeEmail } from "@/lib/authShared";
-import { isValidEmail } from "@/lib/passkey";
+import { isValidEmail, sanitizeEmail } from "@/lib/authShared";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 import { createPasswordResetToken, getAuthMethods } from "@/lib/userStore";
+
+const GENERIC_MESSAGE =
+  "入力されたメールアドレス宛に案内を送りました。届かない場合は迷惑メールも確認してください。";
 
 async function maybeSendResetEmail(email: string, resetUrl: string): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
@@ -41,13 +43,19 @@ function siteBase(request: NextRequest): string {
 
 export async function POST(request: NextRequest) {
   if (!isAccountSyncEnabled()) {
-    return NextResponse.json({ message: "この環境ではアカウント同期は無効です。" }, { status: 404 });
+    return NextResponse.json(
+      { error: "この環境ではアカウント同期は無効です。", message: "この環境ではアカウント同期は無効です。" },
+      { status: 404 },
+    );
   }
 
   const body = (await request.json().catch(() => null)) as { email?: unknown } | null;
   const email = sanitizeEmail(body?.email);
   if (!email || !isValidEmail(email)) {
-    return NextResponse.json({ message: "メールアドレス形式が正しくありません。" }, { status: 400 });
+    return NextResponse.json(
+      { error: "メールアドレス形式が正しくありません。", message: "メールアドレス形式が正しくありません。" },
+      { status: 400 },
+    );
   }
 
   const methods = await getAuthMethods(email);
@@ -56,33 +64,15 @@ export async function POST(request: NextRequest) {
   const builtResetUrl = created
     ? `${siteBase(request)}/reset-password?token=${created.token}`
     : null;
-  const emailed = builtResetUrl ? await maybeSendResetEmail(email, builtResetUrl) : false;
+  if (builtResetUrl) {
+    await maybeSendResetEmail(email, builtResetUrl);
+  }
   const resetUrl =
     builtResetUrl && process.env.AUTH_RETURN_RESET_URL === "1" ? builtResetUrl : undefined;
 
-  let message: string;
-  if (emailed) {
-    message = "再設定用のメールを送信しました。届かない場合は迷惑メールも確認してください。";
-  } else if (resetUrl) {
-    message = "再設定リンクを発行しました（AUTH_RETURN_RESET_URL）。";
-  } else if (methods.hasPasskey) {
-    message =
-      "メール送信が未設定です。パスキーでログインしたあと、メニューから新しいパスワードを設定できます。";
-  } else if (methods.exists && methods.hasPassword) {
-    message =
-      "メール送信（RESEND_API_KEY）が未設定のため、リンクを送れません。パスワードを思い出すか、運用側でメール再設定を有効にしてください。";
-  } else if (methods.exists) {
-    message = "このアカウントの再設定方法が見つかりません。";
-  } else {
-    message = "入力内容を受け付けました。登録がある場合は案内に従ってください。";
-  }
-
   return NextResponse.json({
     ok: true,
-    message,
-    hasPasskey: methods.hasPasskey,
-    hasPassword: methods.hasPassword,
-    emailed,
+    message: GENERIC_MESSAGE,
     ...(resetUrl ? { resetUrl } : {}),
   });
 }

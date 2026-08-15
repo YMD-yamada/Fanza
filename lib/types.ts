@@ -27,6 +27,9 @@ export type NormalizedItem = {
   description?: string;
   actressNames: string[];
   genres: string[];
+  makerNames?: string[];
+  seriesNames?: string[];
+  volume?: string;
   packageImageUrl?: string;
   largeImageUrl?: string;
   sampleVideoUrl?: string;

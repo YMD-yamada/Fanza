@@ -29,6 +29,10 @@ function toFavoriteTerm(value: unknown): FavoriteTerm | null {
   };
 }
 
+export function mergeFavoriteTerms(local: FavoriteTerm[], remote: FavoriteTerm[]): FavoriteTerm[] {
+  return sanitizeFavoriteTerms([...remote, ...local]);
+}
+
 export function sanitizeFavoriteTerms(input: unknown): FavoriteTerm[] {
   if (!Array.isArray(input)) return [];
   const people: FavoriteTerm[] = [];

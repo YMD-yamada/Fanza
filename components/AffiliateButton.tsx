@@ -24,11 +24,11 @@ export function AffiliateButton({ href, itemId, title, className }: AffiliateBut
     <a
       href={href}
       target="_blank"
-      rel="noopener noreferrer"
+      rel="sponsored noopener noreferrer"
       onClick={onClick}
       className={className ?? "inline-flex rounded-md bg-pink-600 px-4 py-2 text-sm font-semibold text-white hover:bg-pink-500"}
     >
-      購入ページへ
+      広告 · FANZAで見る
     </a>
   );
 }

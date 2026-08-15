@@ -81,6 +81,4 @@ export function isChallengeExpired(expiresAt: string, now = Date.now()): boolean
   return new Date(expiresAt).getTime() <= now;
 }
 
-export function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
+export { isValidEmail } from "@/lib/authShared";

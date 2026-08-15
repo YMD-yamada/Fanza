@@ -6,12 +6,15 @@ import { AffiliateButton } from "@/components/AffiliateButton";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { FavoriteGenreChip, FavoriteTermLink } from "@/components/FavoriteTermLink";
 import { RecordHistory } from "@/components/RecordHistory";
+import { RelatedWorks } from "@/components/RelatedWorks";
 import { SafeDetailImage, SafeSampleImage } from "@/components/SafeMedia";
 import { VideoPreview } from "@/components/VideoPreview";
+import { formatVolume } from "@/lib/browse";
 import { getCatalog } from "@/lib/catalogs";
-import { aggregateGetById } from "@/lib/search-aggregate";
+import { aggregateGetById, aggregateSearch } from "@/lib/search-aggregate";
 import { isProviderSourceId } from "@/lib/search-providers";
-import type { SourceId } from "@/lib/types";
+import { itemJsonLd } from "@/lib/seo";
+import type { NormalizedItem, SourceId } from "@/lib/types";
 
 type ItemDetailProps = {
   params: Promise<{ id: string }>;
@@ -86,9 +89,43 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
   const homeHref = catalog === "video" ? "/" : `/?cat=${catalog}`;
   const returnTo = detailParams.returnTo;
   const backHref = returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : homeHref;
+  const relatedLabel = item.actressNames[0] ?? item.genres[0] ?? "";
+  let relatedItems: NormalizedItem[] = [];
+  if (relatedLabel) {
+    try {
+      const related = await aggregateSearch({
+        keyword: relatedLabel,
+        page: 1,
+        catalog,
+        sort: "rank",
+      });
+      relatedItems = related.items.filter((entry) => entry.id !== item.id).slice(0, 8);
+    } catch {
+      relatedItems = [];
+    }
+  }
 
   return (
     <div className="space-y-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            itemJsonLd({
+              id: item.id,
+              title: item.title,
+              description: item.description,
+              largeImageUrl: item.largeImageUrl,
+              packageImageUrl: item.packageImageUrl,
+              actressNames: item.actressNames,
+              affiliateUrl: item.affiliateUrl,
+              listPrice: item.listPrice,
+              releaseDate: item.releaseDate,
+              catalog: getCatalog(catalog),
+            }),
+          ),
+        }}
+      />
       <Link href={backHref} className="inline-flex items-center gap-1 text-sm text-neutral-400 transition-colors hover:text-white">
         ← 検索に戻る
       </Link>
@@ -147,6 +184,24 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
                 </dd>
               </>
             )}
+            {item.makerNames && item.makerNames.length > 0 && (
+              <>
+                <dt className="text-neutral-500">メーカー</dt>
+                <dd className="text-neutral-200">{item.makerNames.join(" / ")}</dd>
+              </>
+            )}
+            {item.seriesNames && item.seriesNames.length > 0 && (
+              <>
+                <dt className="text-neutral-500">シリーズ</dt>
+                <dd className="text-neutral-200">{item.seriesNames.join(" / ")}</dd>
+              </>
+            )}
+            {formatVolume(item.volume) && (
+              <>
+                <dt className="text-neutral-500">収録時間</dt>
+                <dd className="text-neutral-200">{formatVolume(item.volume)}</dd>
+              </>
+            )}
             {item.releaseDate && (
               <>
                 <dt className="text-neutral-500">発売日</dt>
@@ -200,6 +255,8 @@ export default async function ItemDetailPage({ params, searchParams }: ItemDetai
           </div>
         </section>
       )}
+
+      <RelatedWorks items={relatedItems} catalog={catalog} label={relatedLabel || "関連"} />
     </div>
   );
 }

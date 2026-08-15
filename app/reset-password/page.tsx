@@ -12,7 +12,7 @@ function ResetPasswordForm() {
   const token = searchParams.get("token") ?? "";
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(
-    token ? null : "再設定リンクが無効です。アカウントメニューからやり直してください。",
+    token ? null : "再設定リンクが無効です。ログイン画面の「パスワードを忘れた」からやり直してください。",
   );
   const [isLoading, setIsLoading] = useState(false);
 
@@ -28,6 +28,7 @@ function ResetPasswordForm() {
     try {
       const response = await fetch("/api/auth/password/reset", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),
       });
