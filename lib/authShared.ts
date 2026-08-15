@@ -14,12 +14,15 @@ export function sanitizeEmail(input: unknown): string {
   return typeof input === "string" ? input.trim().toLowerCase() : "";
 }
 
+export function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export function validateAuthCredentials(email: string, password: string): {
   ok: boolean;
   reason?: "invalid_email" | "invalid_password";
 } {
-  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  if (!validEmail) {
+  if (!isValidEmail(email)) {
     return { ok: false, reason: "invalid_email" };
   }
   if (password.length < 8) {

@@ -8,6 +8,7 @@ import {
   type FavoriteTerm,
   type FavoriteTermKind,
   isFavoriteTerm,
+  mergeFavoriteTerms,
   sanitizeFavoriteTerms,
   saveFavoriteTerms,
   toggleFavoriteTerm,
@@ -17,6 +18,7 @@ import {
   FAVORITES_MAX_BYTES,
   type SavedItem,
   type SavedItemInput,
+  mergeSavedItems,
   sanitizeSavedItems,
 } from "@/lib/savedItem";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
@@ -25,12 +27,16 @@ const FAVORITES_KEY = "fanza_favorites";
 const HISTORY_KEY = "fanza_history";
 const MAX_HISTORY = 50;
 const SYNC_MARKER = "fanza_favorites_synced_user";
+const TERMS_SYNC_MARKER = "fanza_favorite_terms_synced_user";
 const ACCOUNT_SYNC_ENABLED = isAccountSyncEnabled();
+const SAME_ORIGIN: RequestInit = { cache: "no-store", credentials: "same-origin" };
 
 type AuthUser = {
   id: string;
   email: string;
   createdAt: string;
+  hasPassword?: boolean;
+  hasPasskey?: boolean;
 };
 
 type AuthState = {
@@ -48,6 +54,11 @@ type FavoriteCapacity = {
 
 const AUTH_EVENT = "fanza-auth-changed";
 const FAVORITES_EVENT = "fanza-favorites-changed";
+
+let favoritesHydrate: Promise<SavedItem[] | null> | null = null;
+let favoritesHydrateUserId: string | null = null;
+let termsHydrate: Promise<FavoriteTerm[] | null> | null = null;
+let termsHydrateUserId: string | null = null;
 
 function readStore(key: string): SavedItem[] {
   if (typeof window === "undefined") return [];
@@ -107,7 +118,7 @@ export function useAuthState() {
       setState({ status: "loading", user: null });
     }
     try {
-      const response = await fetch("/api/auth/me", { cache: "no-store" });
+      const response = await fetch("/api/auth/me", SAME_ORIGIN);
       if (!response.ok) {
         setState({ status: "guest", user: null });
         return;
@@ -140,6 +151,55 @@ function upsertFavorite(base: SavedItem[], entry: SavedItemInput): SavedItem[] {
   return sanitizeSavedItems(next, FAVORITES_LIMIT);
 }
 
+async function putFavorites(userId: string, favorites: SavedItem[]): Promise<SavedItem[] | null> {
+  const response = await fetch("/api/favorites", {
+    method: "PUT",
+    ...SAME_ORIGIN,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ favorites }),
+  });
+  if (!response.ok) return null;
+  const data = (await response.json()) as { favorites?: unknown };
+  const synced = sanitizeSavedItems(data.favorites, FAVORITES_LIMIT);
+  favoritesHydrateUserId = userId;
+  favoritesHydrate = Promise.resolve(synced);
+  return synced;
+}
+
+async function hydrateFavoritesForUser(userId: string): Promise<SavedItem[] | null> {
+  if (favoritesHydrate && favoritesHydrateUserId === userId) {
+    return favoritesHydrate;
+  }
+  favoritesHydrateUserId = userId;
+  favoritesHydrate = (async () => {
+    const response = await fetch("/api/favorites", SAME_ORIGIN);
+    if (!response.ok) return null;
+    const data = (await response.json()) as { favorites?: unknown };
+    const remote = sanitizeSavedItems(data.favorites, FAVORITES_LIMIT);
+    const marker = localStorage.getItem(SYNC_MARKER);
+    let next: SavedItem[];
+    if (marker === userId) {
+      next = remote;
+    } else if (!marker) {
+      const local = sanitizeSavedItems(
+        JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? "[]") as unknown,
+        FAVORITES_LIMIT,
+      );
+      next = mergeSavedItems(local, remote);
+      const saved = await putFavorites(userId, next);
+      if (saved) next = saved;
+    } else {
+      next = remote;
+    }
+    writeStore(FAVORITES_KEY, next);
+    localStorage.setItem(SYNC_MARKER, userId);
+    favoritesHydrateUserId = userId;
+    favoritesHydrate = Promise.resolve(next);
+    return next;
+  })();
+  return favoritesHydrate;
+}
+
 export function useFavorites() {
   const localItems = useStore(FAVORITES_KEY);
   const { status, user } = useAuthState();
@@ -147,24 +207,18 @@ export function useFavorites() {
   const [remoteLoaded, setRemoteLoaded] = useState(false);
 
   const refreshRemote = useCallback(async () => {
-    if (!ACCOUNT_SYNC_ENABLED) {
-      setRemoteItems([]);
-      setRemoteLoaded(false);
-      return;
-    }
-    if (!user) {
-      setRemoteItems([]);
-      setRemoteLoaded(false);
+    if (!ACCOUNT_SYNC_ENABLED || !user) {
+      setTimeout(() => {
+        setRemoteItems([]);
+        setRemoteLoaded(false);
+      }, 0);
       return;
     }
     try {
-      const response = await fetch("/api/favorites", { cache: "no-store" });
-      if (!response.ok) return;
-      const data = (await response.json()) as { favorites?: unknown };
-      const synced = sanitizeSavedItems(data.favorites, FAVORITES_LIMIT);
+      const synced = await hydrateFavoritesForUser(user.id);
+      if (!synced) return;
       setRemoteItems(synced);
       setRemoteLoaded(true);
-      notifyFavoritesChanged();
     } catch {
       // Keep local fallback behavior on network errors.
     }
@@ -173,6 +227,8 @@ export function useFavorites() {
   useEffect(() => {
     setTimeout(() => {
       if (!ACCOUNT_SYNC_ENABLED || status !== "authenticated" || !user) {
+        favoritesHydrate = null;
+        favoritesHydrateUserId = null;
         setRemoteLoaded(false);
         setRemoteItems([]);
         return;
@@ -182,35 +238,6 @@ export function useFavorites() {
   }, [refreshRemote, status, user]);
 
   useEffect(() => subscribeEvent(FAVORITES_EVENT, () => void refreshRemote()), [refreshRemote]);
-
-  useEffect(() => {
-    if (!ACCOUNT_SYNC_ENABLED) return;
-    if (!user) return;
-    const marker = localStorage.getItem(SYNC_MARKER);
-    if (marker === user.id) return;
-
-    const localFavorites = sanitizeSavedItems(localItems, FAVORITES_LIMIT);
-    if (localFavorites.length === 0) {
-      localStorage.setItem(SYNC_MARKER, user.id);
-      return;
-    }
-
-    void (async () => {
-      try {
-        const response = await fetch("/api/favorites", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ favorites: localFavorites }),
-        });
-        if (response.ok) {
-          localStorage.setItem(SYNC_MARKER, user.id);
-          await refreshRemote();
-        }
-      } catch {
-        // Keep local fallback behavior on sync errors.
-      }
-    })();
-  }, [localItems, refreshRemote, user]);
 
   const items = useMemo(() => {
     if (status === "authenticated" && user && remoteLoaded) {
@@ -231,14 +258,9 @@ export function useFavorites() {
     async (favorites: SavedItem[]) => {
       if (!ACCOUNT_SYNC_ENABLED || !(status === "authenticated" && user)) return;
       try {
-        const response = await fetch("/api/favorites", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ favorites }),
-        });
-        if (!response.ok) return;
-        const data = (await response.json()) as { favorites?: unknown };
-        const synced = sanitizeSavedItems(data.favorites, FAVORITES_LIMIT);
+        const synced = await putFavorites(user.id, favorites);
+        if (!synced) return;
+        writeStore(FAVORITES_KEY, synced);
         setRemoteItems(synced);
         notifyFavoritesChanged();
       } catch {
@@ -308,11 +330,57 @@ function getFavoriteTermsSnapshot(): string {
   return localStorage.getItem(FAVORITE_TERMS_KEY) ?? "[]";
 }
 
-const TERMS_SYNC_MARKER = "fanza_favorite_terms_synced_user";
-
 function notifyFavoriteTermsChanged() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(FAVORITE_TERMS_EVENT));
+}
+
+async function putFavoriteTerms(userId: string, terms: FavoriteTerm[]): Promise<FavoriteTerm[] | null> {
+  const response = await fetch("/api/favorite-terms", {
+    method: "PUT",
+    ...SAME_ORIGIN,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ terms }),
+  });
+  if (!response.ok) return null;
+  const data = (await response.json()) as { terms?: unknown };
+  const synced = sanitizeFavoriteTerms(data.terms);
+  termsHydrateUserId = userId;
+  termsHydrate = Promise.resolve(synced);
+  return synced;
+}
+
+async function hydrateTermsForUser(userId: string): Promise<FavoriteTerm[] | null> {
+  if (termsHydrate && termsHydrateUserId === userId) {
+    return termsHydrate;
+  }
+  termsHydrateUserId = userId;
+  termsHydrate = (async () => {
+    const response = await fetch("/api/favorite-terms", SAME_ORIGIN);
+    if (!response.ok) return null;
+    const data = (await response.json()) as { terms?: unknown };
+    const remote = sanitizeFavoriteTerms(data.terms);
+    const marker = localStorage.getItem(TERMS_SYNC_MARKER);
+    let next: FavoriteTerm[];
+    if (marker === userId) {
+      next = remote;
+    } else if (!marker) {
+      const local = sanitizeFavoriteTerms(
+        JSON.parse(localStorage.getItem(FAVORITE_TERMS_KEY) ?? "[]") as unknown,
+      );
+      next = mergeFavoriteTerms(local, remote);
+      const saved = await putFavoriteTerms(userId, next);
+      if (saved) next = saved;
+    } else {
+      next = remote;
+    }
+    saveFavoriteTerms(next);
+    localStorage.setItem(TERMS_SYNC_MARKER, userId);
+    termsHydrateUserId = userId;
+    termsHydrate = Promise.resolve(next);
+    return next;
+  })();
+  return termsHydrate;
 }
 
 export function useFavoriteTerms() {
@@ -329,15 +397,16 @@ export function useFavoriteTerms() {
 
   const refreshRemote = useCallback(async () => {
     if (!ACCOUNT_SYNC_ENABLED || !user) {
-      setRemoteTerms([]);
-      setRemoteLoaded(false);
+      setTimeout(() => {
+        setRemoteTerms([]);
+        setRemoteLoaded(false);
+      }, 0);
       return;
     }
     try {
-      const response = await fetch("/api/favorite-terms", { cache: "no-store" });
-      if (!response.ok) return;
-      const data = (await response.json()) as { terms?: unknown };
-      setRemoteTerms(sanitizeFavoriteTerms(data.terms));
+      const synced = await hydrateTermsForUser(user.id);
+      if (!synced) return;
+      setRemoteTerms(synced);
       setRemoteLoaded(true);
     } catch {
       // Keep local fallback on network errors.
@@ -347,6 +416,8 @@ export function useFavoriteTerms() {
   useEffect(() => {
     setTimeout(() => {
       if (!ACCOUNT_SYNC_ENABLED || status !== "authenticated" || !user) {
+        termsHydrate = null;
+        termsHydrateUserId = null;
         setRemoteLoaded(false);
         setRemoteTerms([]);
         return;
@@ -356,34 +427,6 @@ export function useFavoriteTerms() {
   }, [refreshRemote, status, user]);
 
   useEffect(() => subscribeEvent(FAVORITE_TERMS_EVENT, () => void refreshRemote()), [refreshRemote]);
-
-  useEffect(() => {
-    if (!ACCOUNT_SYNC_ENABLED || !user) return;
-    const marker = localStorage.getItem(TERMS_SYNC_MARKER);
-    if (marker === user.id) return;
-
-    const local = sanitizeFavoriteTerms(localTerms);
-    if (local.length === 0) {
-      localStorage.setItem(TERMS_SYNC_MARKER, user.id);
-      return;
-    }
-
-    void (async () => {
-      try {
-        const response = await fetch("/api/favorite-terms", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ terms: local }),
-        });
-        if (response.ok) {
-          localStorage.setItem(TERMS_SYNC_MARKER, user.id);
-          await refreshRemote();
-        }
-      } catch {
-        // Keep local fallback on sync errors.
-      }
-    })();
-  }, [localTerms, refreshRemote, user]);
 
   const terms = useMemo(() => {
     if (status === "authenticated" && user && remoteLoaded) {
@@ -404,14 +447,10 @@ export function useFavoriteTerms() {
     async (next: FavoriteTerm[]) => {
       if (!ACCOUNT_SYNC_ENABLED || !(status === "authenticated" && user)) return;
       try {
-        const response = await fetch("/api/favorite-terms", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ terms: next }),
-        });
-        if (!response.ok) return;
-        const data = (await response.json()) as { terms?: unknown };
-        setRemoteTerms(sanitizeFavoriteTerms(data.terms));
+        const synced = await putFavoriteTerms(user.id, next);
+        if (!synced) return;
+        saveFavoriteTerms(synced);
+        setRemoteTerms(synced);
         notifyFavoriteTermsChanged();
       } catch {
         // Keep local fallback on save errors.
@@ -450,4 +489,3 @@ function sanitizeFavoriteTermsFromJson(serialized: string): FavoriteTerm[] {
     return [];
   }
 }
-

@@ -1,21 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  createUserSession,
-  loginByEmailAndPassword,
-} from "@/lib/auth";
+import { createUserSession, loginByEmailAndPassword } from "@/lib/auth";
 import { sanitizeEmail } from "@/lib/authShared";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 import { getAuthMethods } from "@/lib/userStore";
 
 function badRequest(message: string) {
-  return NextResponse.json({ message }, { status: 400 });
+  return NextResponse.json({ error: message, message }, { status: 400 });
 }
 
 export async function POST(request: NextRequest) {
   if (!isAccountSyncEnabled()) {
     return NextResponse.json(
-      { message: "この公開環境ではアカウント同期は無効です。" },
+      { error: "この公開環境ではアカウント同期は無効です。", message: "この公開環境ではアカウント同期は無効です。" },
       { status: 403 },
     );
   }
@@ -37,26 +34,22 @@ export async function POST(request: NextRequest) {
   const methods = await getAuthMethods(email);
   const user = await loginByEmailAndPassword(email, password);
   if (!user) {
-    let message = "メールアドレスまたはパスワードが正しくありません。";
-    if (methods.exists && !methods.hasPassword && methods.hasPasskey) {
-      message =
-        "このアカウントはパスキー登録です。パスキーでログインするか、パスキー確認後にパスワードを設定してください。";
-    } else if (methods.exists && methods.hasPassword) {
-      message =
-        "パスワードが正しくありません。「パスワードを忘れた」から再設定を試せます。";
-    }
+    const canPasskey = methods.exists && !methods.hasPassword && methods.hasPasskey;
+    const message = canPasskey
+      ? "このアカウントはパスキーのみです。下のボタンから入れます。"
+      : "メールアドレスまたはパスワードが正しくありません。";
     return NextResponse.json(
       {
+        error: message,
         message,
-        exists: methods.exists,
-        hasPassword: methods.hasPassword,
-        hasPasskey: methods.hasPasskey,
+        canPasskey,
       },
       { status: 401 },
     );
   }
 
   await createUserSession(user.id);
+  const after = await getAuthMethods(user.email);
 
   return NextResponse.json({
     ok: true,
@@ -64,6 +57,8 @@ export async function POST(request: NextRequest) {
       id: user.id,
       email: user.email,
       createdAt: user.createdAt,
+      hasPassword: after.hasPassword,
+      hasPasskey: after.hasPasskey,
     },
   });
 }

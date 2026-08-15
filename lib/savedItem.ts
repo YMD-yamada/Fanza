@@ -83,6 +83,24 @@ export function sanitizeSavedItems(input: unknown, limit = FAVORITES_LIMIT): Sav
     .slice(0, limit);
 }
 
+export function savedItemKey(item: Pick<SavedItem, "id" | "source">): string {
+  return `${item.source ?? "fanza"}:${item.id}`;
+}
+
+export function mergeSavedItems(
+  local: SavedItem[],
+  remote: SavedItem[],
+  limit = FAVORITES_LIMIT,
+): SavedItem[] {
+  const map = new Map<string, SavedItem>();
+  for (const item of [...remote, ...local]) {
+    const key = savedItemKey(item);
+    const prev = map.get(key);
+    if (!prev || item.savedAt >= prev.savedAt) map.set(key, item);
+  }
+  return sanitizeSavedItems([...map.values()], limit);
+}
+
 export function parseSavedItems(payload: unknown): SavedItem[] | null {
   if (!payload || typeof payload !== "object") return null;
   const rawItems =
