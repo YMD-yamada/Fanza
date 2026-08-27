@@ -8,12 +8,11 @@ import {
   validateAuthCredentials,
 } from "@/lib/authShared";
 import {
+  type AuthMethods,
   clearStoredSession,
   createStoredSession,
   extendStoredSession,
-  getSessionRecord,
-  getSessionUserId,
-  findUserById,
+  getSessionSnapshot,
   verifyUser,
 } from "@/lib/userStore";
 import { FAVORITES_LIMIT, FAVORITES_MAX_BYTES } from "@/lib/savedItem";
@@ -52,34 +51,36 @@ export async function clearSessionCookie() {
 }
 
 export async function getCurrentUser() {
+  return (await readCurrentSession())?.user ?? null;
+}
+
+async function readCurrentSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
-  const userId = await getSessionUserId(token);
-  if (!userId) return null;
-  const user = await findUserById(userId);
-  if (!user) return null;
-  return user;
+  const snapshot = await getSessionSnapshot(token);
+  return snapshot ? { token, ...snapshot } : null;
 }
 
 /** Refresh a persistent cookie so returning visitors stay signed in. */
 export async function touchCurrentSession() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return null;
-  const record = await getSessionRecord(token);
-  if (!record) return null;
-  const user = await findUserById(record.userId);
-  if (!user) return null;
-  if (record.persist) {
-    const remainingMs = record.expiresAt.getTime() - Date.now();
+  return (await touchCurrentSessionWithAuthMethods())?.user ?? null;
+}
+
+export async function touchCurrentSessionWithAuthMethods(): Promise<
+  { user: AuthUser; methods: AuthMethods } | null
+> {
+  const session = await readCurrentSession();
+  if (!session) return null;
+  if (session.persist) {
+    const remainingMs = session.expiresAt.getTime() - Date.now();
     if (remainingMs < SESSION_TOUCH_AFTER_SECONDS * 1000) {
       const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
-      await extendStoredSession(token, expiresAt);
-      await setSessionCookie(token, true);
+      await extendStoredSession(session.token, expiresAt);
+      await setSessionCookie(session.token, true);
     }
   }
-  return user;
+  return { user: session.user, methods: session.methods };
 }
 
 export async function createUserSession(userId: string, persist = true) {

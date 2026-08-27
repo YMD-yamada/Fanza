@@ -73,8 +73,24 @@ const EMPTY_STORE: UserStoreShape = {
 };
 let writeLock: Promise<void> = Promise.resolve();
 
+/**
+ * Vercel Blob bills every read as a Simple Request and the free tier is 10,000/month.
+ * Read-only paths share this per-instance snapshot; anything that writes must go through
+ * `readStoreForUpdate()` so it never bases a write on stale data.
+ */
+const STORE_CACHE_TTL_MS = Number(process.env.FANZA_STORE_CACHE_TTL_MS ?? 10_000);
+let cachedStore: { store: UserStoreShape; readAt: number } | null = null;
+
 function isBlobStoreEnabled(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+}
+
+function cloneStore(store: UserStoreShape): UserStoreShape {
+  return JSON.parse(JSON.stringify(store)) as UserStoreShape;
+}
+
+function setCachedStore(store: UserStoreShape) {
+  cachedStore = { store: cloneStore(store), readAt: Date.now() };
 }
 
 function hashToken(token: string): string {
@@ -204,14 +220,26 @@ async function writeStoreToBlob(next: UserStoreShape) {
   });
 }
 
+async function readStoreForUpdate(): Promise<UserStoreShape> {
+  if (!isBlobStoreEnabled()) return readStoreFromFile();
+  const store = await readStoreFromBlob();
+  setCachedStore(store);
+  return store;
+}
+
 async function readStore(): Promise<UserStoreShape> {
-  return isBlobStoreEnabled() ? readStoreFromBlob() : readStoreFromFile();
+  if (!isBlobStoreEnabled()) return readStoreFromFile();
+  if (cachedStore && Date.now() - cachedStore.readAt < STORE_CACHE_TTL_MS) {
+    return cloneStore(cachedStore.store);
+  }
+  return readStoreForUpdate();
 }
 
 async function writeStore(next: UserStoreShape) {
   writeLock = writeLock.then(async () => {
     if (isBlobStoreEnabled()) {
       await writeStoreToBlob(next);
+      setCachedStore(next);
     } else {
       await writeStoreToFile(next);
     }
@@ -242,7 +270,7 @@ export async function createStoredUser(
   passkeys: StoredPasskey[] = [],
 ): Promise<CreateStoredUserResult> {
   const normalizedEmail = normalizeEmail(email);
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   if (store.users.some((u) => u.email === normalizedEmail)) {
     return { ok: false, reason: "email_taken" };
   }
@@ -267,7 +295,7 @@ export async function createPasskeyUser(params: {
   passkey: StoredPasskey;
 }): Promise<CreateStoredUserResult> {
   const normalizedEmail = normalizeEmail(params.email);
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   if (store.users.some((u) => u.email === normalizedEmail || u.id === params.id)) {
     return { ok: false, reason: "email_taken" };
   }
@@ -329,7 +357,7 @@ export async function findUserByPasskeyId(
 }
 
 export async function saveWebAuthnChallenge(record: WebAuthnChallengeRecord): Promise<void> {
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   pruneChallenges(store);
   store.webauthnChallenges = store.webauthnChallenges.filter(
     (item) => !(item.email === record.email && item.type === record.type),
@@ -342,7 +370,7 @@ export async function consumeWebAuthnChallenge(params: {
   email: string;
   type: WebAuthnChallengeRecord["type"];
 }): Promise<WebAuthnChallengeRecord | null> {
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   pruneChallenges(store);
   const index = store.webauthnChallenges.findIndex(
     (item) => item.email === normalizeEmail(params.email) && item.type === params.type,
@@ -360,7 +388,7 @@ export async function consumeWebAuthnChallengeByValue(
   challenge: string,
   type: WebAuthnChallengeRecord["type"],
 ): Promise<WebAuthnChallengeRecord | null> {
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   pruneChallenges(store);
   const index = store.webauthnChallenges.findIndex(
     (item) => item.challenge === challenge && item.type === type,
@@ -378,7 +406,7 @@ export async function addPasskeyToUser(
   userId: string,
   passkey: StoredPasskey,
 ): Promise<boolean> {
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   const user = store.users.find((u) => u.id === userId);
   if (!user) return false;
   if (user.passkeys.some((item) => item.credentialId === passkey.credentialId)) {
@@ -392,7 +420,7 @@ export async function addPasskeyToUser(
 export async function clearAllPasskeysForUser(
   userId: string,
 ): Promise<{ ok: boolean; cleared: number; hasPassword: boolean }> {
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   const user = store.users.find((u) => u.id === userId);
   if (!user) return { ok: false, cleared: 0, hasPassword: false };
   const hasPassword = Boolean(user.passwordHash);
@@ -410,7 +438,7 @@ export async function updatePasskeyCounter(
   credentialId: string,
   counter: number,
 ): Promise<boolean> {
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   const user = store.users.find((u) => u.id === userId);
   if (!user) return false;
   const passkey = user.passkeys.find((item) => item.credentialId === credentialId);
@@ -451,7 +479,7 @@ export async function setUserPasswordHash(
   userId: string,
   passwordHash: string,
 ): Promise<boolean> {
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   const user = store.users.find((u) => u.id === userId);
   if (!user) return false;
   user.passwordHash = passwordHash;
@@ -463,7 +491,7 @@ export async function createPasswordResetToken(
   email: string,
 ): Promise<{ token: string; userId: string } | null> {
   const normalizedEmail = normalizeEmail(email);
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   const user = store.users.find((u) => u.email === normalizedEmail);
   if (!user) return null;
 
@@ -485,7 +513,7 @@ export async function createPasswordResetToken(
 export async function consumePasswordResetToken(
   token: string,
 ): Promise<{ userId: string; email: string } | null> {
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   const now = Date.now();
   store.passwordResetTokens = store.passwordResetTokens.filter(
     (item) => new Date(item.expiresAt).getTime() > now,
@@ -507,7 +535,7 @@ export async function createStoredSession(
   expiresAt: Date,
   persist = true,
 ): Promise<void> {
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   removeExpiredSessions(store);
   const others = store.sessions.filter((session) => session.userId !== userId);
   const mine = store.sessions
@@ -527,22 +555,58 @@ export async function createStoredSession(
   await writeStore(store);
 }
 
+function findLiveSession(store: UserStoreShape, token: string): StoredSession | null {
+  const tokenHash = hashToken(token);
+  const now = Date.now();
+  return (
+    store.sessions.find(
+      (session) =>
+        session.tokenHash === tokenHash && new Date(session.expiresAt).getTime() > now,
+    ) ?? null
+  );
+}
+
 export async function getSessionRecord(
   token: string,
 ): Promise<{ userId: string; persist: boolean; expiresAt: Date } | null> {
   const store = await readStore();
-  const beforeCount = store.sessions.length;
-  removeExpiredSessions(store);
-  const tokenHash = hashToken(token);
-  const session = store.sessions.find((s) => s.tokenHash === tokenHash);
-  if (store.sessions.length !== beforeCount) {
-    await writeStore(store);
-  }
+  const session = findLiveSession(store, token);
   if (!session) return null;
   return {
     userId: session.userId,
     persist: session.persist !== false,
     expiresAt: new Date(session.expiresAt),
+  };
+}
+
+export type SessionSnapshot = {
+  userId: string;
+  persist: boolean;
+  expiresAt: Date;
+  user: UserProfile;
+  methods: AuthMethods;
+};
+
+/**
+ * Resolves the session, the profile and the available auth methods from a single store
+ * read so `/api/auth/me` costs one Blob request instead of three.
+ */
+export async function getSessionSnapshot(token: string): Promise<SessionSnapshot | null> {
+  const store = await readStore();
+  const session = findLiveSession(store, token);
+  if (!session) return null;
+  const user = store.users.find((u) => u.id === session.userId);
+  if (!user) return null;
+  return {
+    userId: session.userId,
+    persist: session.persist !== false,
+    expiresAt: new Date(session.expiresAt),
+    user: toProfile(user),
+    methods: {
+      exists: true,
+      hasPassword: Boolean(user.passwordHash),
+      hasPasskey: user.passkeys.length > 0,
+    },
   };
 }
 
@@ -552,7 +616,7 @@ export async function getSessionUserId(token: string): Promise<string | null> {
 }
 
 export async function extendStoredSession(token: string, expiresAt: Date): Promise<boolean> {
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   removeExpiredSessions(store);
   const tokenHash = hashToken(token);
   const session = store.sessions.find((s) => s.tokenHash === tokenHash);
@@ -563,7 +627,7 @@ export async function extendStoredSession(token: string, expiresAt: Date): Promi
 }
 
 export async function clearStoredSession(token: string): Promise<void> {
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   const tokenHash = hashToken(token);
   store.sessions = store.sessions.filter((session) => session.tokenHash !== tokenHash);
   await writeStore(store);
@@ -576,7 +640,7 @@ export async function getUserFavorites(userId: string): Promise<SavedItem[]> {
 }
 
 export async function setUserFavorites(userId: string, favorites: SavedItem[]): Promise<boolean> {
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   const user = store.users.find((u) => u.id === userId);
   if (!user) return false;
   user.favorites = clampFavorites(favorites);
@@ -594,7 +658,7 @@ export async function setUserFavoriteTerms(
   userId: string,
   terms: FavoriteTerm[],
 ): Promise<boolean> {
-  const store = await readStore();
+  const store = await readStoreForUpdate();
   const user = store.users.find((u) => u.id === userId);
   if (!user) return false;
   user.favoriteTerms = sanitizeFavoriteTerms(terms);
