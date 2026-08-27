@@ -11,6 +11,8 @@
 - 構造上の見積もりで、1 ページ表示あたりの Blob Simple Request は数十回 → 0〜2 回。実測はストアの停止解除後に確認する。
 - suspend 中の挙動: 読み取りは空ストア扱い＝ログアウト状態、localStorage フォールバックで閲覧とお気に入りは動く。ログイン/登録は 500。
 - スモーク: tsc / eslint / next build 通過。ファイルストアで 登録 → `/api/auth/me`（hasPassword/hasPasskey 含む）→ favorites PUT/GET → favorite-terms PUT → logout → me=null を確認。
+- PR #32 merged (`1fa3ea5b`) → production READY (`dpl_9UFAiEKf…`)。本番 https://fanza-nine.vercel.app で `/`・`/login`・`/api/auth/me` が 200 を確認。
+- **次にやること**: Blob ストアの suspend が解けたら、Vercel の Blob Usage で Simple Requests の日次消費を確認する。想定は 1 ページ表示あたり 0〜2 回。まだ多いなら `FANZA_STORE_CACHE_TTL_MS` を伸ばすか、セッション照合を署名付き Cookie に寄せて Blob 読み取り自体を無くす。
 
 ## 2026-08-15 Session (FANZA SSO + auto-login)
 
