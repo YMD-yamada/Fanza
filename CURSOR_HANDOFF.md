@@ -1,5 +1,17 @@
 # CURSOR HANDOFF
 
+## 2026-08-27 Session (Blob 無料枠の超過対応)
+
+- Vercel Blob `fanza-user-data` が Simple Requests 10,000/月（Hobby 無料枠）を使い切り、ストアが 30 日間 suspend 中。プランは hobby なので**課金は発生していない**。本番相当のサーバーで書き込みが `Vercel Blob: This store has been suspended.` になることを確認。
+- 原因: `FavoriteButton` / `TermFavoriteButton` がカードごとに `useAuthState()` を持ち、1 ページ表示で数十本の `/api/auth/me` が飛んでいた。さらに 1 リクエストあたり Blob を 3 回読む（`getSessionRecord` → `findUserById` → `getAuthMethodsByUserId`）。
+- 対策（branch `fix/blob-request-usage`）:
+  - `lib/useStorage.ts`: 認証状態をモジュール単一ストア化（`useSyncExternalStore` + in-flight 共有 + 30s TTL）。favorites / terms は既に `favoritesHydrate` / `termsHydrate` で共有済みだったのでそのまま。
+  - `lib/userStore.ts`: 読み取り専用パスに per-instance スナップショット（既定 10s、`FANZA_STORE_CACHE_TTL_MS` で調整可）。書き込みを伴う 15 箇所は `readStoreForUpdate()` で必ず最新を読む。`getSessionRecord` の「読み取り時に prune して write」も廃止。
+  - `lib/auth.ts` + `app/api/auth/me`: `getSessionSnapshot()` / `touchCurrentSessionWithAuthMethods()` で Blob 読み取り 3 回 → 1 回。セッション延長の挙動は据え置き。
+- 構造上の見積もりで、1 ページ表示あたりの Blob Simple Request は数十回 → 0〜2 回。実測はストアの停止解除後に確認する。
+- suspend 中の挙動: 読み取りは空ストア扱い＝ログアウト状態、localStorage フォールバックで閲覧とお気に入りは動く。ログイン/登録は 500。
+- スモーク: tsc / eslint / next build 通過。ファイルストアで 登録 → `/api/auth/me`（hasPassword/hasPasskey 含む）→ favorites PUT/GET → favorite-terms PUT → logout → me=null を確認。
+
 ## 2026-08-15 Session (FANZA SSO + auto-login)
 
 - FANZA公式の会員ログイン（OAuth/OpenID）は第三者サイト向けに公開されていない。偽のFANZAログインフォームは作らない。

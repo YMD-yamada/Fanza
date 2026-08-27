@@ -104,40 +104,83 @@ function notifyFavoritesChanged() {
   notifyEvent(FAVORITES_EVENT);
 }
 
-export function useAuthState() {
-  const [state, setState] = useState<AuthState>(
-    ACCOUNT_SYNC_ENABLED ? { status: "loading", user: null } : { status: "guest", user: null },
-  );
+/**
+ * FavoriteButton renders once per card, so a per-hook auth fetch meant dozens of
+ * /api/auth/me calls per page view, each costing several Vercel Blob reads. Auth state
+ * lives in one module-level store instead, and every mounted hook shares it.
+ */
+const AUTH_TTL_MS = 30_000;
+const GUEST_STATE: AuthState = { status: "guest", user: null };
+const LOADING_STATE: AuthState = { status: "loading", user: null };
 
-  const refresh = useCallback(async (setLoading = false) => {
-    if (!ACCOUNT_SYNC_ENABLED) {
-      setState({ status: "guest", user: null });
-      return;
-    }
-    if (setLoading) {
-      setState({ status: "loading", user: null });
-    }
+let authState: AuthState = ACCOUNT_SYNC_ENABLED ? LOADING_STATE : GUEST_STATE;
+let authFetchedAt = 0;
+let authInFlight: Promise<void> | null = null;
+const authListeners = new Set<() => void>();
+
+function subscribeAuth(cb: () => void) {
+  authListeners.add(cb);
+  return () => {
+    authListeners.delete(cb);
+  };
+}
+
+function setAuthState(next: AuthState) {
+  authState = next;
+  for (const listener of authListeners) listener();
+}
+
+function loadAuthState(force: boolean): Promise<void> {
+  if (!ACCOUNT_SYNC_ENABLED) {
+    if (authState !== GUEST_STATE) setAuthState(GUEST_STATE);
+    return Promise.resolve();
+  }
+  if (authInFlight) return authInFlight;
+  if (!force && authFetchedAt && Date.now() - authFetchedAt < AUTH_TTL_MS) {
+    return Promise.resolve();
+  }
+
+  authInFlight = (async () => {
     try {
       const response = await fetch("/api/auth/me", SAME_ORIGIN);
       if (!response.ok) {
-        setState({ status: "guest", user: null });
+        setAuthState(GUEST_STATE);
         return;
       }
       const data = (await response.json()) as { user?: AuthUser | null };
-      setState(data.user ? { status: "authenticated", user: data.user } : { status: "guest", user: null });
+      setAuthState(data.user ? { status: "authenticated", user: data.user } : GUEST_STATE);
     } catch {
-      setState({ status: "guest", user: null });
+      setAuthState(GUEST_STATE);
+    } finally {
+      authFetchedAt = Date.now();
     }
+  })().finally(() => {
+    authInFlight = null;
+  });
+
+  return authInFlight;
+}
+
+export function useAuthState() {
+  const state = useSyncExternalStore(
+    subscribeAuth,
+    () => authState,
+    () => (ACCOUNT_SYNC_ENABLED ? LOADING_STATE : GUEST_STATE),
+  );
+
+  const refresh = useCallback(async (setLoading = false) => {
+    if (setLoading && ACCOUNT_SYNC_ENABLED && !authInFlight) {
+      setAuthState(LOADING_STATE);
+    }
+    await loadAuthState(true);
   }, []);
 
   useEffect(() => {
     if (!ACCOUNT_SYNC_ENABLED) return;
-    setTimeout(() => {
-      void refresh(true);
-    }, 0);
-  }, [refresh]);
+    void loadAuthState(false);
+  }, []);
 
-  useEffect(() => subscribeEvent(AUTH_EVENT, () => void refresh()), [refresh]);
+  useEffect(() => subscribeEvent(AUTH_EVENT, () => void loadAuthState(true)), []);
 
   return { ...state, refresh };
 }
