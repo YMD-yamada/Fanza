@@ -13,15 +13,21 @@ export type SaleFloor = {
   label: string;
   service: string;
   floor: string;
+  /**
+   * price: 10円以下の作品を全部拾う
+   * campaign: キャンペーン名に「10円」が入っている作品だけ拾う
+   *   （同人は新作の「95%OFF・5円」が毎日大量にあり、価格だけだと通知が鳴りっぱなしになるため）
+   */
+  mode: "price" | "campaign";
 };
 
 export const SALE_FLOORS: SaleFloor[] = [
-  { id: "video", label: "動画", service: "digital", floor: "videoa" },
-  { id: "amateur", label: "素人動画", service: "digital", floor: "videoc" },
-  { id: "anime", label: "アニメ", service: "digital", floor: "anime" },
-  { id: "doujin", label: "同人", service: "doujin", floor: "digital_doujin" },
-  { id: "books", label: "コミック", service: "ebook", floor: "comic" },
-  { id: "pcgame", label: "PCゲーム", service: "pcgame", floor: "digital_pcgame" },
+  { id: "video", label: "動画", service: "digital", floor: "videoa", mode: "price" },
+  { id: "amateur", label: "素人動画", service: "digital", floor: "videoc", mode: "price" },
+  { id: "anime", label: "アニメ", service: "digital", floor: "anime", mode: "price" },
+  { id: "books", label: "コミック", service: "ebook", floor: "comic", mode: "price" },
+  { id: "pcgame", label: "PCゲーム", service: "pcgame", floor: "digital_pcgame", mode: "price" },
+  { id: "doujin", label: "同人", service: "doujin", floor: "digital_doujin", mode: "campaign" },
 ];
 
 export const SALE_MAX_PRICE = 10;
@@ -67,24 +73,28 @@ function str(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
+const TEN_YEN_RE = /10\s*円/;
+
 function firstCampaign(raw: Record<string, unknown>): { title?: string; end?: string } {
   const c = raw.campaign;
   const list = Array.isArray(c) ? c : c && typeof c === "object" ? [c] : [];
-  const hit = (list as Record<string, unknown>[]).find((x) => /10\s*円/.test(String(x?.title ?? "")))
+  const hit = (list as Record<string, unknown>[]).find((x) => TEN_YEN_RE.test(String(x?.title ?? "")))
     ?? (list as Record<string, unknown>[])[0];
   if (!hit) return {};
   return { title: str(hit.title), end: str(hit.date_end) };
 }
 
-function toSaleItem(raw: Record<string, unknown>, floorId: string): SaleItem | null {
+function toSaleItem(raw: Record<string, unknown>, floor: SaleFloor): SaleItem | null {
+  const floorId = floor.id;
   const prices = (raw.prices as Record<string, unknown> | undefined) ?? {};
   const price = toNumber(prices.price);
   if (price === undefined || price <= 0 || price > SALE_MAX_PRICE) return null;
-  const image = (raw.imageURL as Record<string, unknown> | undefined) ?? {};
   const campaign = firstCampaign(raw);
+  if (floor.mode === "campaign" && !TEN_YEN_RE.test(campaign.title ?? "")) return null;
+  const image = (raw.imageURL as Record<string, unknown> | undefined) ?? {};
   const productUrl = str(raw.URL);
   return {
-    id: str(raw.content_id) ?? str(raw.product_id) ?? `${floorId}-${str(raw.title)}`,
+    id: `${floorId}:${str(raw.content_id) ?? str(raw.product_id) ?? str(raw.title) ?? "unknown"}`,
     floorId,
     title: str(raw.title) ?? "タイトル不明",
     price,
@@ -125,7 +135,7 @@ async function scanFloor(floor: SaleFloor, debug: boolean): Promise<FloorResult>
     const json = (await res.json()) as { result?: { items?: Record<string, unknown>[] } };
     const raws = json.result?.items ?? [];
     const items = raws
-      .map((raw) => toSaleItem(raw, floor.id))
+      .map((raw) => toSaleItem(raw, floor))
       .filter((x): x is SaleItem => x !== null);
     const result: FloorResult = { floorId: floor.id, label: floor.label, ok: true, items };
     if (debug) {

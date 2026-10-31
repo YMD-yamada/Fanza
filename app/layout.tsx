@@ -29,6 +29,8 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description: DEFAULT_DESCRIPTION,
+  // 静的ファイル（public/manifest.webmanifest）。/sale は自分の manifest で上書きする
+  manifest: "/manifest.webmanifest",
   robots: {
     index: true,
     follow: true,
@@ -81,6 +83,9 @@ export default async function RootLayout({
               Fanza Search
             </Link>
             <nav className="flex items-center gap-3 text-[11px] text-neutral-400 sm:gap-4 sm:text-xs">
+              <Link href="/sale" className="text-amber-400 transition-colors hover:text-amber-300">
+                10円ベル
+              </Link>
               <Link href="/legal/terms" className="transition-colors hover:text-white">
                 利用規約
               </Link>
