@@ -50,7 +50,7 @@ export default async function SalePage() {
   const summary = summarizeScan(scan);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-6">
+    <div className="flex flex-col gap-6">
       <section className="flex items-center gap-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/sale/icon.svg" alt="" width={56} height={56} className="h-14 w-14 rounded-2xl" />
@@ -89,11 +89,10 @@ export default async function SalePage() {
       <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-xs leading-relaxed text-neutral-400">
         <h2 className="mb-1 text-sm font-semibold text-neutral-300">しくみ</h2>
         <p>
-          DMMアフィリエイトの公式API（作品一覧）を「安い順」で1日4回ほど確認し、10円以下（無料は除く）の作品を集めています。
-          同人は「95%OFF・5円」の新作がいつも多いため、キャンペーン名に「10円」が入っているものだけを対象にしています。
-          価格は確認した時点のものです。購入前にFANZAの表示を確かめてください。
+          1日4回、FANZAの作品一覧を安い順に確かめて、10円以下の作品を集めています（同人は「10円」キャンペーンの作品だけ）。
+          価格は確かめた時点のものです。買う前にFANZAの表示を確認してください。
         </p>
       </section>
-    </main>
+    </div>
   );
 }
