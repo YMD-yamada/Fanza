@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { addPasskeyToAccount } from "@/lib/passkey-client";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
 import { notifyAuthChanged, useAuthState } from "@/lib/useStorage";
 
-const PASSWORD_MIN = 8;
 const ACCOUNT_SYNC_ENABLED = isAccountSyncEnabled();
 const SAME_ORIGIN: RequestInit = { credentials: "same-origin" };
 
@@ -48,17 +48,12 @@ function LoggedInMenu({ user }: { user: SessionUser }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [hasPassword, setHasPassword] = useState(Boolean(user.hasPassword));
-  const [hasPasskey, setHasPasskey] = useState(Boolean(user.hasPasskey));
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setHasPassword(Boolean(user.hasPassword));
-    setHasPasskey(Boolean(user.hasPasskey));
-  }, [user.hasPassword, user.hasPasskey]);
+  }, [user.hasPassword]);
 
   useEffect(() => {
     if (!open) return;
@@ -90,67 +85,18 @@ function LoggedInMenu({ user }: { user: SessionUser }) {
     }
   };
 
-  const changePassword = async (event: FormEvent) => {
-    event.preventDefault();
-    if (newPassword.length < PASSWORD_MIN) {
-      setMessage(`パスワードは${PASSWORD_MIN}文字以上で入力してください。`);
-      return;
-    }
+  const addPasskey = async () => {
     setBusy(true);
     setMessage(null);
     try {
-      const response = await fetch("/api/auth/password/set", {
-        method: "POST",
-        ...SAME_ORIGIN,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          password: newPassword,
-          ...(hasPassword ? { currentPassword } : {}),
-        }),
-      });
-      const data = (await response.json().catch(() => null)) as { message?: string; error?: string } | null;
-      if (!response.ok) {
-        setMessage(data?.error ?? data?.message ?? "パスワード設定に失敗しました。");
+      const result = await addPasskeyToAccount();
+      if (!result.ok) {
+        setMessage(result.error);
         return;
       }
-      setCurrentPassword("");
-      setNewPassword("");
-      setHasPassword(true);
-      setMessage(data?.message ?? "パスワードを設定しました。");
-    } catch {
-      setMessage("通信に失敗しました。");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const removePasskeys = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!confirmPassword) {
-      setMessage("本人確認のため、現在のパスワードを入力してください。");
-      return;
-    }
-    setBusy(true);
-    setMessage(null);
-    try {
-      const response = await fetch("/api/auth/passkey/remove", {
-        method: "POST",
-        ...SAME_ORIGIN,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: confirmPassword }),
-      });
-      const data = (await response.json().catch(() => null)) as {
-        message?: string;
-        error?: string;
-        hasPasskey?: boolean;
-      } | null;
-      if (!response.ok) {
-        setMessage(data?.error ?? data?.message ?? "パスキーの削除に失敗しました。");
-        return;
-      }
-      setConfirmPassword("");
-      setHasPasskey(false);
-      setMessage(data?.message ?? "パスキーを削除しました。");
+      setHasPassword(false);
+      setMessage("パスキーを追加しました。この端末でもボタン1つで入れます。");
+      notifyAuthChanged();
     } catch {
       setMessage("通信に失敗しました。");
     } finally {
@@ -174,56 +120,25 @@ function LoggedInMenu({ user }: { user: SessionUser }) {
           role="menu"
           className="absolute right-0 z-40 mt-2 w-72 rounded-xl border border-neutral-800 bg-neutral-950 p-3 shadow-xl"
         >
-          <p className="text-xs text-neutral-400">お気に入りはログイン中に端末間同期されます。この端末では自動ログインします。</p>
-          <form className="mt-3 space-y-2" onSubmit={(event) => void changePassword(event)}>
-            {hasPassword ? (
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-                placeholder="現在のパスワード"
-                autoComplete="current-password"
-                className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100"
-              />
-            ) : (
-              <p className="text-[11px] text-amber-200">パスワード未設定です。追加しておくとパスキーなしでも入れます。</p>
-            )}
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              placeholder={hasPassword ? "新しいパスワード" : "パスワードを設定（8文字以上）"}
-              autoComplete="new-password"
-              className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100"
-            />
-            <button
-              type="submit"
-              disabled={busy}
-              className="w-full rounded-md bg-sky-600 px-2.5 py-1.5 text-xs font-medium text-white disabled:opacity-60"
-            >
-              {hasPassword ? "パスワードを変更" : "パスワードを設定"}
-            </button>
-          </form>
-          {hasPassword && hasPasskey ? (
-            <form className="mt-3 space-y-2 border-t border-neutral-800 pt-3" onSubmit={(event) => void removePasskeys(event)}>
-              <p className="text-[11px] text-neutral-500">以前のパスキーが残っています。不要なら削除できます。</p>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                placeholder="確認用パスワード"
-                autoComplete="current-password"
-                className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-xs text-neutral-100"
-              />
-              <button
-                type="submit"
-                disabled={busy}
-                className="w-full rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-200 disabled:opacity-60"
-              >
-                パスキーを削除
-              </button>
-            </form>
+          <p className="text-xs leading-5 text-neutral-400">
+            お気に入りはログイン中に端末間で同期されます。ログインはパスキー（顔・指紋・画面ロック）だけです。
+          </p>
+          {hasPassword ? (
+            <p className="mt-2 rounded-md bg-amber-500/10 px-2 py-1.5 text-[11px] leading-5 text-amber-200">
+              まだパスキーがありません。下のボタンで作ると、古いパスワードは削除されます。
+            </p>
           ) : null}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void addPasskey()}
+            className="mt-3 w-full rounded-md bg-sky-600 px-2.5 py-2 text-xs font-medium text-white disabled:opacity-60"
+          >
+            {hasPassword ? "パスキーを作る" : "この端末にパスキーを追加"}
+          </button>
+          <p className="mt-1 text-[10px] leading-4 text-neutral-500">
+            別のスマホやPCでも入りたいときは、その端末でログインしてからここで追加します。
+          </p>
           <button
             type="button"
             disabled={busy}

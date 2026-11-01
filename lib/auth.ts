@@ -5,7 +5,6 @@ import {
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_SECONDS,
   SESSION_TRANSIENT_AGE_SECONDS,
-  validateAuthCredentials,
 } from "@/lib/authShared";
 import {
   type AuthMethods,
@@ -91,15 +90,10 @@ export async function createUserSession(userId: string, persist = true) {
   await setSessionCookie(token, persist);
 }
 
+/** 旧パスワード利用者がパスキーへ切り替えるときの1回だけの本人確認に使う。 */
 export async function loginByEmailAndPassword(email: string, password: string) {
   const user = await verifyUser(email, password);
   return user;
-}
-
-export function createPasswordHash(password: string): string {
-  const salt = randomBytes(16).toString("hex");
-  const hash = scryptSync(password, salt, HASH_LENGTH).toString("hex");
-  return `${salt}:${hash}`;
 }
 
 export function verifyPassword(password: string, storedHash: string): boolean {
@@ -110,14 +104,6 @@ export function verifyPassword(password: string, storedHash: string): boolean {
   const actualHash = scryptSync(password, salt, HASH_LENGTH);
   if (expectedHash.length !== actualHash.length) return false;
   return timingSafeEqual(expectedHash, actualHash);
-}
-
-export function assertValidCredentials(email: string, password: string): {
-  ok: boolean;
-  reason?: "invalid_email" | "invalid_password";
-} {
-  const result = validateAuthCredentials(email, password);
-  return result.ok ? { ok: true } : result;
 }
 
 export async function logoutCurrentUser() {

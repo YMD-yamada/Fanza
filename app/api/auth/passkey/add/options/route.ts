@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     userID: new TextEncoder().encode(user.id),
     attestationType: "none",
     authenticatorSelection: {
-      residentKey: "preferred",
+      residentKey: "required",
       userVerification: "preferred",
     },
     excludeCredentials: stored.passkeys.map((passkey) => ({
