@@ -1,0 +1,11 @@
+{
+  "name": "Fanza Search Navigator",
+  "short_name": "Fanza Search",
+  "description": "FANZA作品を広告表示つきで検索・比較できるR18ナビ（18歳未満利用不可）。人気・新着から探せ、出演・価格を並べて公式購入ページへ進めます。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "lang": "ja",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

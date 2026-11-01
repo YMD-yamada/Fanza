@@ -1,5 +1,13 @@
 # CURSOR HANDOFF
 
+## 2026-10-31 Session (10円ベル /sale)
+
+- 新機能「10円ベル」: FANZA の10円セールを公式 API（ItemList, sort=-price）で 1日4回確認し、Web Push で通知。PR #33（branch `claude/project-thread-9izcwo`）。
+- 実測（10/31）: 動画・素人・アニメ・コミックの最安は 60〜330円、PCゲームは 0円（無料）。同人は「95%OFF・5円」が常時 90件以上 → 同人はキャンペーン名に「10円」を含むものだけ対象。
+- 通知の鍵は env（SALE_VAPID_PUBLIC_KEY / SALE_VAPID_PRIVATE_KEY）が無ければ初回に生成し、非公開 Blob `sale-watch/state.json` に保存。CRON_SECRET は任意（未設定時は合言葉なしの呼び出しを2時間に1回へ制限）。
+- `app/manifest.ts` は `public/manifest.webmanifest` + `metadata.manifest` に置換（/sale で専用 manifest に上書きするため）。
+- **次にやること**: マージ後、本番 /sale で通知オン → 確認通知が届くこと。10円セールが来たら通知文と件数（100件上限）を確認。
+
 ## 2026-08-27 Session (Blob 無料枠の超過対応)
 
 - Vercel Blob `fanza-user-data` が Simple Requests 10,000/月（Hobby 無料枠）を使い切り、ストアが 30 日間 suspend 中。プランは hobby なので**課金は発生していない**。本番相当のサーバーで書き込みが `Vercel Blob: This store has been suspended.` になることを確認。
