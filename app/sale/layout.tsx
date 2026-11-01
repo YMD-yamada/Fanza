@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "FANZAで10円になった作品をまとめて表示し、見つかったらスマホに通知します。登録不要・無料。",
   manifest: "/sale/manifest.webmanifest",
   icons: {
-    icon: [{ url: "/sale/icon.svg", type: "image/svg+xml" }],
+    icon: [{ url: "/sale/icon-192.png", type: "image/png", sizes: "192x192" }],
     apple: [{ url: "/sale/apple-touch-icon.png", sizes: "180x180" }],
   },
   appleWebApp: {

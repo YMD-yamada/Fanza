@@ -53,7 +53,7 @@ export default async function SalePage() {
     <div className="flex flex-col gap-6">
       <section className="flex items-center gap-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/sale/icon.svg" alt="" width={56} height={56} className="h-14 w-14 rounded-2xl" />
+        <img src="/sale/icon-rounded-256.png" alt="" width={56} height={56} className="h-14 w-14 rounded-2xl" />
         <div>
           <h1 className="text-xl font-bold">10円ベル</h1>
           <p className="text-sm text-neutral-400">FANZAで10円になった作品を見つけて、スマホに知らせます。</p>
