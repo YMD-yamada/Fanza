@@ -79,20 +79,20 @@ export default async function RootLayout({
         />
         <header className="sticky top-0 z-30 border-b border-neutral-800/80 bg-neutral-950/80 backdrop-blur-md">
           <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-3">
-            <Link href="/" className="text-sm font-bold tracking-tight sm:text-base">
+            <Link href="/" className="whitespace-nowrap text-sm font-bold tracking-tight sm:text-base">
               Fanza Search
             </Link>
-            <nav className="flex items-center gap-3 text-[11px] text-neutral-400 sm:gap-4 sm:text-xs">
+            <nav className="flex items-center gap-3 whitespace-nowrap text-xs text-neutral-400 sm:gap-4">
               <Link href="/sale" className="text-amber-400 transition-colors hover:text-amber-300">
                 10円ベル
               </Link>
-              <Link href="/legal/terms" className="transition-colors hover:text-white">
+              <Link href="/legal/terms" className="hidden transition-colors hover:text-white sm:inline">
                 利用規約
               </Link>
-              <Link href="/legal/privacy" className="transition-colors hover:text-white">
+              <Link href="/legal/privacy" className="hidden transition-colors hover:text-white sm:inline">
                 プライバシー
               </Link>
-              <Link href="/legal/notice" className="transition-colors hover:text-white">
+              <Link href="/legal/notice" className="hidden transition-colors hover:text-white sm:inline">
                 表記
               </Link>
               <AccountMenu />

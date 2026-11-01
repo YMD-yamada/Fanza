@@ -417,22 +417,6 @@ export async function addPasskeyToUser(
   return true;
 }
 
-export async function clearAllPasskeysForUser(
-  userId: string,
-): Promise<{ ok: boolean; cleared: number; hasPassword: boolean }> {
-  const store = await readStoreForUpdate();
-  const user = store.users.find((u) => u.id === userId);
-  if (!user) return { ok: false, cleared: 0, hasPassword: false };
-  const hasPassword = Boolean(user.passwordHash);
-  if (!hasPassword) {
-    return { ok: false, cleared: 0, hasPassword: false };
-  }
-  const cleared = user.passkeys.length;
-  user.passkeys = [];
-  await writeStore(store);
-  return { ok: true, cleared, hasPassword: true };
-}
-
 export async function updatePasskeyCounter(
   userId: string,
   credentialId: string,
@@ -475,58 +459,15 @@ export async function getAuthMethodsByUserId(userId: string): Promise<AuthMethod
   };
 }
 
-export async function setUserPasswordHash(
-  userId: string,
-  passwordHash: string,
-): Promise<boolean> {
+/** パスキーへ移行したら古いパスワードは消す（パスワードでは二度と入れなくする）。 */
+export async function clearUserPassword(userId: string): Promise<boolean> {
   const store = await readStoreForUpdate();
   const user = store.users.find((u) => u.id === userId);
   if (!user) return false;
-  user.passwordHash = passwordHash;
+  if (!user.passwordHash) return true;
+  delete user.passwordHash;
   await writeStore(store);
   return true;
-}
-
-export async function createPasswordResetToken(
-  email: string,
-): Promise<{ token: string; userId: string } | null> {
-  const normalizedEmail = normalizeEmail(email);
-  const store = await readStoreForUpdate();
-  const user = store.users.find((u) => u.email === normalizedEmail);
-  if (!user) return null;
-
-  const token = randomBytes(32).toString("hex");
-  const now = Date.now();
-  store.passwordResetTokens = store.passwordResetTokens.filter(
-    (item) => item.email !== normalizedEmail && new Date(item.expiresAt).getTime() > now,
-  );
-  store.passwordResetTokens.push({
-    tokenHash: hashToken(token),
-    userId: user.id,
-    email: normalizedEmail,
-    expiresAt: new Date(now + 60 * 60 * 1000).toISOString(),
-  });
-  await writeStore(store);
-  return { token, userId: user.id };
-}
-
-export async function consumePasswordResetToken(
-  token: string,
-): Promise<{ userId: string; email: string } | null> {
-  const store = await readStoreForUpdate();
-  const now = Date.now();
-  store.passwordResetTokens = store.passwordResetTokens.filter(
-    (item) => new Date(item.expiresAt).getTime() > now,
-  );
-  const tokenHash = hashToken(token);
-  const index = store.passwordResetTokens.findIndex((item) => item.tokenHash === tokenHash);
-  if (index < 0) {
-    await writeStore(store);
-    return null;
-  }
-  const [record] = store.passwordResetTokens.splice(index, 1);
-  await writeStore(store);
-  return record ? { userId: record.userId, email: record.email } : null;
 }
 
 export async function createStoredSession(

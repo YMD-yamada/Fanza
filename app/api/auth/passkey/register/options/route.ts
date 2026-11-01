@@ -34,9 +34,11 @@ export async function POST(request: NextRequest) {
       const methods = await getAuthMethods(email);
       return NextResponse.json(
         {
-          message: methods.hasPassword
-            ? "このメールアドレスは既に登録されています。パスワードでログインしてください。"
-            : "このメールアドレスは既に登録されています。パスキーでログインしてください。",
+          message:
+            methods.hasPassword && !methods.hasPasskey
+              ? "以前パスワードで登録したアカウントです。下の「以前パスワードで登録した方」から、1回だけパスキーへの切り替えをしてください。"
+              : "このメールアドレスは登録済みです。「パスキーでログイン」を押してください。",
+          legacyPassword: methods.hasPassword && !methods.hasPasskey,
           exists: true,
           hasPassword: methods.hasPassword,
           hasPasskey: methods.hasPasskey,
@@ -55,7 +57,7 @@ export async function POST(request: NextRequest) {
       userID: new TextEncoder().encode(userId),
       attestationType: "none",
       authenticatorSelection: {
-        residentKey: "preferred",
+        residentKey: "required",
         userVerification: "preferred",
       },
       excludeCredentials: [],
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[passkey/register/options]", error);
     return NextResponse.json(
-      { message: "パスキー登録の準備に失敗しました。パスワードで登録してください。" },
+      { message: "パスキー登録の準備に失敗しました。時間をおいてもう一度お試しください。" },
       { status: 500 },
     );
   }

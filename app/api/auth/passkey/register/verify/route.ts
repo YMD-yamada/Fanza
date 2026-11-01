@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[passkey/register/verify]", error);
     return NextResponse.json(
-      { message: "パスキーの検証に失敗しました。パスワードで登録してください。" },
+      { message: "パスキーを作れませんでした。もう一度お試しください。" },
       { status: 400 },
     );
   }

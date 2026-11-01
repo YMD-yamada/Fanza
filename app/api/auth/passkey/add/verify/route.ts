@@ -12,7 +12,7 @@ import {
   type StoredPasskey,
 } from "@/lib/passkey";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
-import { addPasskeyToUser, consumeWebAuthnChallenge } from "@/lib/userStore";
+import { addPasskeyToUser, clearUserPassword, consumeWebAuthnChallenge } from "@/lib/userStore";
 
 export async function POST(request: NextRequest) {
   if (!isAccountSyncEnabled()) {
@@ -73,6 +73,9 @@ export async function POST(request: NextRequest) {
   if (!ok) {
     return NextResponse.json({ message: "パスキーの保存に失敗しました。" }, { status: 500 });
   }
+
+  // パスキーができたら古いパスワードは消す（このアプリはパスキーだけで入る）
+  await clearUserPassword(user.id);
 
   return NextResponse.json({ ok: true, message: "パスキーを追加しました。" });
 }

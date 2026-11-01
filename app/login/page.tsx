@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-12">
+    <div className="flex justify-center pb-24 pt-2 sm:pt-12">
       <AuthPanel />
-    </main>
+    </div>
   );
 }
