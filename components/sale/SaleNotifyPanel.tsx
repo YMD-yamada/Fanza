@@ -309,13 +309,16 @@ export function SaleNotifyPanel() {
                   少し下へずらして <b className="text-neutral-200">「ホーム画面に追加」</b> を押す
                 </li>
                 <li>
-                  右上の <b className="text-neutral-200">「追加」</b> を押す
+                  <b className="text-neutral-200">「ウェブアプリとして開く」</b> がオン（緑）なのを確かめて、右上の{" "}
+                  <b className="text-neutral-200">「追加」</b> を押す
                 </li>
                 <li>
                   ホーム画面の <b className="text-neutral-200">「10円ベル」</b> を開くと、続きの手順が出ます
                 </li>
               </ol>
-              <p className="mt-2 text-xs text-neutral-500">追加できたら、このページは閉じて大丈夫です。</p>
+              <p className="mt-2 text-xs text-neutral-500">
+                追加できたら、このページは閉じて大丈夫です。アイコンから開いてもこの手順が出るときは、アイコンを削除して「ウェブアプリとして開く」をオンにして追加し直してください。
+              </p>
             </Step>
           ) : installEvent ? (
             <Step n={1} done={false} active title="ホーム画面に追加する（おすすめ）">
@@ -409,6 +412,7 @@ export function SaleNotifyPanel() {
       )}
 
       {error && <p className="mt-2 text-xs text-rose-400">{error}</p>}
+      {env !== "loading" ? <Diag env={env} perm={perm} subscribed={subscribed} lastPush={lastPush} /> : null}
     </section>
   );
 }
@@ -449,4 +453,17 @@ function ShareIcon() {
       <path d="M6 11v9h12v-9" strokeLinejoin="round" />
     </svg>
   );
+}
+
+function Diag({ env, perm, subscribed, lastPush }: { env: Env; perm: Perm; subscribed: boolean; lastPush: string | null }) {
+  // 困ったときにスクリーンショットで状態が分かるよう、小さく出しておく
+  const items = [
+    isIos() ? "iPhone" : "その他",
+    isStandalone() ? "アプリで表示" : "ブラウザで表示",
+    `許可:${perm === "granted" ? "済" : perm === "denied" ? "拒否" : "未"}`,
+    `登録:${subscribed ? "済" : "未"}`,
+    `受信:${lastPush ? "あり" : "なし"}`,
+    env,
+  ];
+  return <p className="mt-3 text-[10px] text-neutral-600">状態: {items.join(" / ")}</p>;
 }
