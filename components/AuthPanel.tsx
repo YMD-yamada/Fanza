@@ -2,9 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { addPasskeyToAccount, authenticateWithPasskey, createAccountWithPasskey } from "@/lib/passkey-client";
+import {
+  addPasskeyToAccount,
+  authenticateWithPasskey,
+  createAccountWithPasskey,
+  sendSignupCode,
+} from "@/lib/passkey-client";
 
-type View = "main" | "create" | "legacy";
+type View = "main" | "create" | "code" | "legacy";
 
 const primaryButton =
   "w-full rounded-xl bg-emerald-500 px-4 py-3 text-base font-semibold text-emerald-950 transition-colors hover:bg-emerald-400 disabled:opacity-60";
@@ -21,6 +26,7 @@ export function AuthPanel() {
   const [view, setView] = useState<View>("main");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -66,6 +72,17 @@ export function AuthPanel() {
 
   const create = () =>
     run(async () => {
+      const sent = await sendSignupCode(email);
+      if (!sent.ok) {
+        setMessage(sent.error);
+        return;
+      }
+      if (sent.needsCode) {
+        setCode("");
+        setView("code");
+        setMessage(`${email.trim()} に6桁の確認コードを送りました。届かないときは迷惑メールも見てください。`);
+        return;
+      }
       const result = await createAccountWithPasskey(email);
       if (result.ok) {
         goHome();
@@ -73,6 +90,22 @@ export function AuthPanel() {
       }
       setMessage(result.error);
       if (result.legacyPassword) setView("legacy");
+    });
+
+  const confirmCode = () =>
+    run(async () => {
+      const result = await createAccountWithPasskey(email, code);
+      if (result.ok) {
+        goHome();
+        return;
+      }
+      setMessage(result.error);
+    });
+
+  const resendCode = () =>
+    run(async () => {
+      const sent = await sendSignupCode(email);
+      setMessage(sent.ok ? "確認コードを送り直しました。" : sent.error);
     });
 
   const migrate = () =>
@@ -100,7 +133,7 @@ export function AuthPanel() {
   return (
     <div className="mx-auto w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/80 p-6">
       <h1 className="text-xl font-semibold text-zinc-50">
-        {view === "create" ? "はじめての方" : view === "legacy" ? "パスキーへの切り替え" : "ログイン"}
+        {view === "create" || view === "code" ? "はじめての方" : view === "legacy" ? "パスキーへの切り替え" : "ログイン"}
       </h1>
 
       {view === "main" ? (
@@ -138,7 +171,7 @@ export function AuthPanel() {
           }}
         >
           <p className="text-sm leading-6 text-zinc-400">
-            メールアドレスを入れて「パスキーを作る」を押すと、この端末に鍵が保存されます。次からはボタン1つで入れます。メールは届きません（同期の名前として使うだけです）。
+            メールアドレスを入れて「次へ」を押してください。メールに届く6桁のコードで本人確認をしてから、この端末にパスキー（鍵）を作ります。次からはボタン1つで入れます。
           </p>
           <label className="block text-sm text-zinc-300">
             メールアドレス
@@ -153,11 +186,50 @@ export function AuthPanel() {
             />
           </label>
           <button type="submit" disabled={busy || !email.trim()} className={primaryButton}>
-            {busy ? "作成中…" : "パスキーを作る"}
+            {busy ? "送信中…" : "次へ"}
           </button>
           <button type="button" onClick={() => switchView("main")} className="text-sm text-zinc-400 underline">
             戻る
           </button>
+        </form>
+      ) : null}
+
+      {view === "code" ? (
+        <form
+          className="mt-3 space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void confirmCode();
+          }}
+        >
+          <p className="text-sm leading-6 text-zinc-400">
+            メールに届いた6桁のコードを入れて「パスキーを作る」を押してください。顔・指紋・画面ロックの確認が出たら、そのまま進めます。
+          </p>
+          <label className="block text-sm text-zinc-300">
+            6桁の確認コード
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]*"
+              maxLength={6}
+              required
+              value={code}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              className={`${inputClass} tracking-[0.4em]`}
+            />
+          </label>
+          <button type="submit" disabled={busy || code.length !== 6} className={primaryButton}>
+            {busy ? "作成中…" : "パスキーを作る"}
+          </button>
+          <div className="flex justify-between">
+            <button type="button" disabled={busy} onClick={() => void resendCode()} className="text-sm text-zinc-400 underline">
+              コードを送り直す
+            </button>
+            <button type="button" onClick={() => switchView("create")} className="text-sm text-zinc-400 underline">
+              メールアドレスを入れ直す
+            </button>
+          </div>
         </form>
       ) : null}
 

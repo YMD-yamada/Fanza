@@ -14,7 +14,7 @@ import {
   type StoredPasskey,
 } from "@/lib/passkey";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
-import { consumeWebAuthnChallenge, createPasskeyUser } from "@/lib/userStore";
+import { clearEmailCode, consumeWebAuthnChallenge, createPasskeyUser } from "@/lib/userStore";
 
 export async function POST(request: NextRequest) {
   if (!isAccountSyncEnabled()) {
@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "このメールアドレスは既に登録されています。" }, { status: 409 });
   }
 
+  await clearEmailCode(email).catch(() => undefined);
   await createUserSession(created.user.id);
   return NextResponse.json({
     ok: true,
