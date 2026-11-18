@@ -13,6 +13,7 @@
     "@simplewebauthn/server": "^13.3.2",
     "@vercel/blob": "^2.6.1",
     "next": "16.2.2",
+    "nodemailer": "^6.10.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "web-push": "^3.6.7"
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^6.4.24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",

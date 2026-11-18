@@ -50,6 +50,16 @@ type UserStoreShape = {
   sessions: StoredSession[];
   webauthnChallenges: WebAuthnChallengeRecord[];
   passwordResetTokens: PasswordResetToken[];
+  emailCodes: EmailCodeRecord[];
+};
+
+/** はじめての登録で送る6桁の確認コード（ハッシュだけ保存） */
+type EmailCodeRecord = {
+  email: string;
+  codeHash: string;
+  expiresAt: string;
+  attempts: number;
+  sentAt: string;
 };
 
 type PasswordResetToken = {
@@ -70,6 +80,7 @@ const EMPTY_STORE: UserStoreShape = {
   sessions: [],
   webauthnChallenges: [],
   passwordResetTokens: [],
+  emailCodes: [],
 };
 let writeLock: Promise<void> = Promise.resolve();
 
@@ -172,7 +183,18 @@ function normalizeStore(raw: Partial<UserStoreShape> | null | undefined): UserSt
           typeof item.expiresAt === "string",
       )
     : [];
-  return { users, sessions, webauthnChallenges, passwordResetTokens };
+  const emailCodes = Array.isArray(raw?.emailCodes)
+    ? raw.emailCodes.filter(
+        (item) =>
+          item &&
+          typeof item.email === "string" &&
+          typeof item.codeHash === "string" &&
+          typeof item.expiresAt === "string" &&
+          typeof item.attempts === "number" &&
+          typeof item.sentAt === "string",
+      )
+    : [];
+  return { users, sessions, webauthnChallenges, passwordResetTokens, emailCodes };
 }
 
 async function ensureDataFile() {
@@ -605,4 +627,75 @@ export async function setUserFavoriteTerms(
   user.favoriteTerms = sanitizeFavoriteTerms(terms);
   await writeStore(store);
   return true;
+}
+
+const EMAIL_CODE_TTL_MS = 10 * 60 * 1000;
+const EMAIL_CODE_MAX_ATTEMPTS = 5;
+const EMAIL_CODE_RESEND_MS = 30 * 1000;
+
+function pruneEmailCodes(store: UserStoreShape) {
+  const now = Date.now();
+  store.emailCodes = store.emailCodes.filter((item) => Date.parse(item.expiresAt) > now);
+}
+
+export type IssueEmailCodeResult = { ok: true; code: string } | { ok: false; reason: "too_soon" };
+
+/** 6桁の確認コードを作って保存する（同じメールの古いコードは置き換え） */
+export async function issueEmailCode(email: string): Promise<IssueEmailCodeResult> {
+  const normalized = normalizeEmail(email);
+  const store = await readStoreForUpdate();
+  pruneEmailCodes(store);
+  const previous = store.emailCodes.find((item) => item.email === normalized);
+  if (previous && Date.now() - Date.parse(previous.sentAt) < EMAIL_CODE_RESEND_MS) {
+    await writeStore(store);
+    return { ok: false, reason: "too_soon" };
+  }
+  const code = String(randomBytes(4).readUInt32BE(0) % 1_000_000).padStart(6, "0");
+  store.emailCodes = store.emailCodes.filter((item) => item.email !== normalized);
+  store.emailCodes.push({
+    email: normalized,
+    codeHash: hashToken(`${normalized}:${code}`),
+    expiresAt: new Date(Date.now() + EMAIL_CODE_TTL_MS).toISOString(),
+    attempts: 0,
+    sentAt: new Date().toISOString(),
+  });
+  await writeStore(store);
+  return { ok: true, code };
+}
+
+export type CheckEmailCodeResult = "ok" | "wrong" | "expired" | "locked";
+
+/**
+ * 確認コードを照合する。5回まちがえたら無効。
+ * 合っていてもここでは消さない（パスキー作成を途中でやめても、同じコードでやり直せるように）。
+ * 登録が終わったら clearEmailCode で消す。
+ */
+export async function checkEmailCode(email: string, code: string): Promise<CheckEmailCodeResult> {
+  const normalized = normalizeEmail(email);
+  const store = await readStoreForUpdate();
+  pruneEmailCodes(store);
+  const record = store.emailCodes.find((item) => item.email === normalized);
+  if (!record) {
+    await writeStore(store);
+    return "expired";
+  }
+  if (record.attempts >= EMAIL_CODE_MAX_ATTEMPTS) {
+    await writeStore(store);
+    return "locked";
+  }
+  if (record.codeHash !== hashToken(`${normalized}:${code.trim()}`)) {
+    record.attempts += 1;
+    await writeStore(store);
+    return record.attempts >= EMAIL_CODE_MAX_ATTEMPTS ? "locked" : "wrong";
+  }
+  await writeStore(store);
+  return "ok";
+}
+
+export async function clearEmailCode(email: string): Promise<void> {
+  const normalized = normalizeEmail(email);
+  const store = await readStoreForUpdate();
+  pruneEmailCodes(store);
+  store.emailCodes = store.emailCodes.filter((item) => item.email !== normalized);
+  await writeStore(store);
 }

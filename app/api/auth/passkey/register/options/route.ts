@@ -10,8 +10,9 @@ import {
   getRelyingPartyConfig,
   isValidEmail,
 } from "@/lib/passkey";
+import { isMailConfigured } from "@/lib/mailer";
 import { isAccountSyncEnabled } from "@/lib/runtimeConfig";
-import { findUserByEmail, getAuthMethods, saveWebAuthnChallenge } from "@/lib/userStore";
+import { checkEmailCode, findUserByEmail, getAuthMethods, saveWebAuthnChallenge } from "@/lib/userStore";
 
 export async function POST(request: NextRequest) {
   if (!isAccountSyncEnabled()) {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "すでにログインしています。" }, { status: 400 });
     }
 
-    const body = (await request.json().catch(() => null)) as { email?: unknown } | null;
+    const body = (await request.json().catch(() => null)) as { email?: unknown; code?: unknown } | null;
     const email = sanitizeEmail(body?.email);
     if (!email || !isValidEmail(email)) {
       return NextResponse.json({ message: "メールアドレス形式が正しくありません。" }, { status: 400 });
@@ -45,6 +46,21 @@ export async function POST(request: NextRequest) {
         },
         { status: 409 },
       );
+    }
+
+    // メール送信が設定済みなら、メールに届いた6桁のコードで本人のメールか確かめてから作る
+    if (isMailConfigured()) {
+      const code = typeof body?.code === "string" ? body.code.replace(/\D/g, "") : "";
+      const checked = code.length === 6 ? await checkEmailCode(email, code) : "wrong";
+      if (checked !== "ok") {
+        const message =
+          checked === "expired"
+            ? "確認コードの期限が切れました。「コードを送り直す」を押してください。"
+            : checked === "locked"
+              ? "確認コードを何度もまちがえたため使えなくなりました。「コードを送り直す」を押してください。"
+              : "確認コードが違います。メールに届いた6桁を入れてください。";
+        return NextResponse.json({ message, codeError: checked }, { status: 400 });
+      }
     }
 
     const rp = getRelyingPartyConfig(request);

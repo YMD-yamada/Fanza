@@ -75,15 +75,29 @@ export async function authenticateWithPasskey(): Promise<Result> {
   return { ok: true };
 }
 
+/**
+ * はじめての人：メールに6桁の確認コードを送る。
+ * サーバーでメール送信が未設定なら needsCode: false（コードなしでそのままパスキーを作る）。
+ */
+export async function sendSignupCode(
+  email: string,
+): Promise<{ ok: true; needsCode: boolean } | { ok: false; error: string }> {
+  const trimmed = email.trim();
+  if (!trimmed) return { ok: false, error: "メールアドレスを入力してください。" };
+  const result = await postJson<ApiMessage & { enabled?: boolean }>("/api/auth/email-code", { email: trimmed });
+  if (!result.ok) return { ok: false, error: pickMessage(result.data, "確認コードを送れませんでした。") };
+  return { ok: true, needsCode: result.data?.enabled === true };
+}
+
 /** はじめての人：メールアドレスでアカウントを作り、この端末にパスキーを保存する。 */
-export async function createAccountWithPasskey(email: string): Promise<Result> {
+export async function createAccountWithPasskey(email: string, code?: string): Promise<Result> {
   const trimmed = email.trim();
   if (!trimmed) return { ok: false, error: "メールアドレスを入力してください。" };
 
   const options = await postJson<ApiMessage & {
     options?: PublicKeyCredentialCreationOptionsJSON;
     legacyPassword?: boolean;
-  }>("/api/auth/passkey/register/options", { email: trimmed });
+  }>("/api/auth/passkey/register/options", { email: trimmed, code });
   if (!options.ok || !options.data?.options) {
     return {
       ok: false,
